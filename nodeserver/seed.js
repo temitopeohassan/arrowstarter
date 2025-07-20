@@ -4,7 +4,7 @@ require('dotenv').config();
 const { initializeApp, cert } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 
-// Replace this with the dynamic serviceAccount config if not using JSON file
+// Service account setup
 const serviceAccount = {
   type: "service_account",
   project_id: process.env.FIREBASE_PROJECT_ID,
@@ -19,12 +19,11 @@ const serviceAccount = {
   universe_domain: process.env.FIREBASE_UNIVERSE_DOMAIN,
 };
 
-initializeApp({
-  credential: cert(serviceAccount),
-});
-
+// Initialize Firebase
+initializeApp({ credential: cert(serviceAccount) });
 const db = getFirestore();
 
+// Seeding function
 async function seedData() {
   const projects = [
     {
@@ -36,8 +35,10 @@ async function seedData() {
       supporters: 5,
       creatorAddress: '0xABC123...DEF',
       status: 'Funding Open',
+      featured: true,
+      image: 'https://emerald-blushing-mouse-798.mypinata.cloud/ipfs/Qma8T41VZpfPXZ7vMu2Z5UACMy2L3zHPBFKkBVoKnnWM4B',
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     },
     {
       title: 'E-learning App for Kids',
@@ -48,20 +49,22 @@ async function seedData() {
       supporters: 20,
       creatorAddress: '0x456DEF...789',
       status: 'Funding Open',
+      featured: false,
+      image: 'https://emerald-blushing-mouse-798.mypinata.cloud/ipfs/bafybeidrtw2nki7cuujxynhgz6mk3rtmm25f53a47emyyr4jqflg7p2atu',
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     }
   ];
 
   const backings = [
     {
-      projectId: '', // to be filled after project creation
+      projectId: '', // Will be set after project creation
       backerAddress: '0xBACKER001',
       amount: 500,
       createdAt: new Date()
     },
     {
-      projectId: '', // to be filled after project creation
+      projectId: '', // Will be set after project creation
       backerAddress: '0xBACKER002',
       amount: 300,
       createdAt: new Date()

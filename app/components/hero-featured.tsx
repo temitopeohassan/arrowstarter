@@ -24,23 +24,22 @@ type Project = {
 
 export function HeroFeatured() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
-  async function fetchFeaturedProjects() {
+  const fetchFeaturedProjects = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/hero-featured`);
-      if (!response.ok) throw new Error("Failed to fetch featured projects");
-      const data: Project[] = await response.json();
-      setProjects(data);
+      const res = await fetch(`${API_BASE_URL}/api/hero-featured`);
+      if (!res.ok) throw new Error("Failed to fetch featured projects");
+      const data: Project[] = await res.json();
+      setProjects(Array.isArray(data) ? data : []);
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || "An error occurred");
+      setFetchError(err.message || "An error occurred");
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
     fetchFeaturedProjects();
@@ -58,10 +57,18 @@ export function HeroFeatured() {
     );
   }
 
-  if (error || projects.length === 0) {
+  if (fetchError) {
     return (
       <section className="py-12 md:py-20 text-center text-destructive">
-        <p>{error ?? "No featured project available"}</p>
+        <p>{fetchError}</p>
+      </section>
+    );
+  }
+
+  if (projects.length === 0) {
+    return (
+      <section className="py-12 md:py-20 text-center text-muted-foreground">
+        <p>No featured projects available at the moment.</p>
       </section>
     );
   }

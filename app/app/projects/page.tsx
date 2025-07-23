@@ -21,7 +21,7 @@ import { Film, Book, Music, Search } from "lucide-react";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 import { API_BASE_URL } from "../config";
-import { BackProjectModal } from "../components/BackProjectModal"; // Adjust path as needed
+import { BackProjectModal } from "@/components/BackProjectModal"; // Adjust path as needed
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<any[]>([]);

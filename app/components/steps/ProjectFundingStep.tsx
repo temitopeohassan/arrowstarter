@@ -19,7 +19,7 @@ interface ProjectFundingStepProps {
   isLoading: boolean;
 }
 
-export default function ProjectFundingStep({
+export function ProjectFundingStep({
   formData,
   setFormData,
   onBack,

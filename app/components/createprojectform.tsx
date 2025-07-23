@@ -1,4 +1,3 @@
-// components/CreateProjectForm.tsx
 "use client";
 
 import { useState } from "react";
@@ -9,7 +8,7 @@ import { useProjectRefresh } from "@/context/ProjectRefreshContext";
 import { ProjectBasicsStep } from "./steps/ProjectBasicsStep";
 import { ProjectFundingStep } from "./steps/ProjectFundingStep";
 import { ProjectReviewStep } from "./steps/ProjectReviewStep";
-import { ProjectFormWithPreview } from "./steps/types"; // 👈 import correct type
+import { ProjectFormWithPreview } from "./steps/types";
 
 const steps = ["Basics", "Funding", "Review"] as const;
 type Step = (typeof steps)[number];
@@ -19,7 +18,10 @@ interface CreateProjectFormProps {
   onSuccess?: () => void;
 }
 
-export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectFormProps) {
+export default function CreateProjectForm({
+  onClose,
+  onSuccess,
+}: CreateProjectFormProps) {
   const { address } = useAccount();
   const { triggerRefresh } = useProjectRefresh();
 
@@ -86,7 +88,9 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
       onSuccess?.();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create project");
+      setError(
+        err instanceof Error ? err.message : "Failed to create project"
+      );
     } finally {
       setIsUploading(false);
       setIsCreating(false);
@@ -104,7 +108,9 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
           {/* Header */}
           <div className="p-6 border-b">
             <h2 className="text-lg font-semibold">Create New Project</h2>
-            <p className="text-sm text-muted-foreground">Step {steps.indexOf(step) + 1} of 3: {step}</p>
+            <p className="text-sm text-muted-foreground">
+              Step {steps.indexOf(step) + 1} of 3: {step}
+            </p>
           </div>
 
           {/* Main content */}
@@ -126,7 +132,9 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
             {step === "Funding" && (
               <ProjectFundingStep
                 formData={formData}
-                setFormData={(data) => setFormData((prev) => ({ ...prev, ...data }))}
+                setFormData={(data) =>
+                  setFormData((prev) => ({ ...prev, ...data }))
+                }
                 onBack={prevStep}
                 onNext={nextStep}
                 isLoading={isLoading}
@@ -134,11 +142,12 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
             )}
 
             {step === "Review" && (
-              <ProjectReviewStep formData=<ProjectReviewStep
-  {...formData}
-  imagePreview={formData.imagePreview || null}
-  onBack={prevStep}
-  isLoading={isLoading} />
+              <ProjectReviewStep
+                {...formData}
+                imagePreview={formData.imagePreview || null}
+                onBack={prevStep}
+                isLoading={isLoading}
+              />
             )}
 
             {isUploading && (
@@ -157,11 +166,19 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
           {/* Footer */}
           <div className="p-6 border-t flex justify-between">
             {step !== "Basics" ? (
-              <button onClick={prevStep} disabled={isLoading} className="btn-outline">
+              <button
+                onClick={prevStep}
+                disabled={isLoading}
+                className="btn-outline"
+              >
                 Back
               </button>
             ) : (
-              <button onClick={onClose} disabled={isLoading} className="btn-outline">
+              <button
+                onClick={onClose}
+                disabled={isLoading}
+                className="btn-outline"
+              >
                 Cancel
               </button>
             )}
@@ -172,10 +189,18 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
                 disabled={isLoading || !formData.image}
                 className="btn-primary"
               >
-                {isCreating ? "Creating..." : isUploading ? "Uploading..." : "Launch Project"}
+                {isCreating
+                  ? "Creating..."
+                  : isUploading
+                  ? "Uploading..."
+                  : "Launch Project"}
               </button>
             ) : (
-              <button onClick={nextStep} disabled={isLoading} className="btn-primary">
+              <button
+                onClick={nextStep}
+                disabled={isLoading}
+                className="btn-primary"
+              >
                 Next <ArrowRight className="ml-2 h-4 w-4" />
               </button>
             )}

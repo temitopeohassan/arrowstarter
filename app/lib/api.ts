@@ -13,6 +13,7 @@ export interface Project {
   createdAt: Date;
   updatedAt: Date;
   image?: string;
+  featured?: boolean;
 }
 
 export interface Backing {
@@ -22,8 +23,37 @@ export interface Backing {
   createdAt: Date;
 }
 
+export interface UploadResult {
+  message: string;
+  ipfsHash: string;
+  fileUrl: string;
+  filename: string;
+  size: number;
+  pinataUrl: string;
+}
+
+export interface CreateProjectResponse {
+  id: string;
+  message: string;
+}
+
+export interface ApiResponse {
+  message: string;
+}
+
+// Helper function for error handling
+const handleResponse = async (response: Response) => {
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || `HTTP ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+};
+
 // Project API calls
-export const createProject = async (projectData: Omit<Project, 'id' | 'raised' | 'supporters' | 'status' | 'createdAt' | 'updatedAt'>) => {
+export const createProject = async (
+  projectData: Omit<Project, 'id' | 'raised' | 'supporters' | 'status' | 'createdAt' | 'updatedAt'>
+): Promise<CreateProjectResponse> => {
   const response = await fetch(`${API_BASE_URL}/projects`, {
     method: 'POST',
     headers: {
@@ -31,25 +61,35 @@ export const createProject = async (projectData: Omit<Project, 'id' | 'raised' |
     },
     body: JSON.stringify(projectData),
   });
-  return response.json();
+  return handleResponse(response);
 };
 
-export const getProjects = async (category?: string, search?: string) => {
+export const getProjects = async (category?: string, search?: string): Promise<Project[]> => {
   const params = new URLSearchParams();
-  if (category) params.append('category', category);
+  if (category && category !== 'all') params.append('category', category);
   if (search) params.append('search', search);
   
   const response = await fetch(`${API_BASE_URL}/projects?${params.toString()}`);
-  return response.json();
+  return handleResponse(response);
 };
 
-export const getProject = async (id: string) => {
+export const getProject = async (id: string): Promise<Project> => {
   const response = await fetch(`${API_BASE_URL}/projects/${id}`);
-  return response.json();
+  return handleResponse(response);
+};
+
+// Get featured projects for hero section
+export const getFeaturedProjects = async (): Promise<Project[]> => {
+  const response = await fetch(`${API_BASE_URL}/hero-featured`);
+  return handleResponse(response);
 };
 
 // Project backing
-export const backProject = async (projectId: string, amount: number, backerAddress: string) => {
+export const backProject = async (
+  projectId: string, 
+  amount: number, 
+  backerAddress: string
+): Promise<ApiResponse> => {
   const response = await fetch(`${API_BASE_URL}/projects/${projectId}/back`, {
     method: 'POST',
     headers: {
@@ -57,11 +97,11 @@ export const backProject = async (projectId: string, amount: number, backerAddre
     },
     body: JSON.stringify({ amount, backerAddress }),
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 // File upload
-export const uploadFile = async (file: File) => {
+export const uploadFile = async (file: File): Promise<UploadResult> => {
   const formData = new FormData();
   formData.append('file', file);
   
@@ -69,16 +109,16 @@ export const uploadFile = async (file: File) => {
     method: 'POST',
     body: formData,
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 // User projects
-export const getUserProjects = async (address: string) => {
+export const getUserProjects = async (address: string): Promise<Project[]> => {
   const response = await fetch(`${API_BASE_URL}/users/${address}/projects`);
-  return response.json();
+  return handleResponse(response);
 };
 
-export const getUserBackedProjects = async (address: string) => {
+export const getUserBackedProjects = async (address: string): Promise<Project[]> => {
   const response = await fetch(`${API_BASE_URL}/users/${address}/backed-projects`);
-  return response.json();
-}; 
+  return handleResponse(response);
+};

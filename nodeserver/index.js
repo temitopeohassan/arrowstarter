@@ -46,10 +46,10 @@ app.get("/", (req, res) => {
   res.send("<h1>🚀 Arrow Starter Backend API Server</h1>");
 });
 
-// ✅ Create Project
+// ✅ Create Project (Updated to include image)
 app.post("/api/projects", async (req, res) => {
   try {
-    const { title, description, category, goal, creatorAddress, featured = false } = req.body;
+    const { title, description, category, goal, creatorAddress, image, featured = false } = req.body;
 
     const docRef = await db.collection("projects").add({
       title,
@@ -57,10 +57,11 @@ app.post("/api/projects", async (req, res) => {
       category,
       goal,
       creatorAddress,
+      image: image || "", // Add image field
       raised: 0,
       supporters: 0,
       status: "Funding Open",
-      featured,
+      featured: featured, // Fixed syntax error
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -71,7 +72,6 @@ app.post("/api/projects", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
 
 // ✅ Get All Projects (optionally filtered)
 app.get("/api/projects", async (req, res) => {
@@ -128,7 +128,6 @@ app.get("/api/hero-featured", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
 
 // ✅ Get Single Project
 app.get("/api/projects/:id", async (req, res) => {

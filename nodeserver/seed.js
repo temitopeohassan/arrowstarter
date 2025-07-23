@@ -25,35 +25,60 @@ const db = getFirestore();
 
 // Seeding function
 async function seedData() {
+const now = new Date();
+
   const projects = [
     {
-      title: 'Solar-Powered Cold Storage',
-      description: 'Affordable cooling systems for rural farmers.',
-      category: 'Energy',
-      goal: 5000,
-      raised: 1200,
-      supporters: 5,
-      creatorAddress: '0xABC123...DEF',
-      status: 'Funding Open',
-      featured: true,
-      image: 'https://emerald-blushing-mouse-798.mypinata.cloud/ipfs/Qma8T41VZpfPXZ7vMu2Z5UACMy2L3zHPBFKkBVoKnnWM4B',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      title: 'E-learning App for Kids',
-      description: 'Gamified learning for kids aged 6-12.',
-      category: 'Education',
-      goal: 10000,
-      raised: 7000,
-      supporters: 20,
-      creatorAddress: '0x456DEF...789',
-      status: 'Funding Open',
-      featured: false,
-      image: 'https://emerald-blushing-mouse-798.mypinata.cloud/ipfs/bafybeidrtw2nki7cuujxynhgz6mk3rtmm25f53a47emyyr4jqflg7p2atu',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
+    title: 'Digital Art Collection Genesis',
+    description: 'An innovative collection exploring the intersection of traditional art and blockchain technology.',
+    category: 'Art',
+    goal: 6,
+    raised: 0,
+    supporters: 0,
+    creatorAddress: '0xABC123...DEF',
+    status: 'Funding Open',
+    featured: true,
+    image: 'https://emerald-blushing-mouse-798.mypinata.cloud/ipfs/bafkreihp3sduwqcklm2qpx2bocgorkmoygionwu2cljkawmtv7jh6sjkpe',
+    createdAt: now,
+    updatedAt: now,
+    deadline: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000), // 14 days from now
+    deliverablesMet: false,
+    deliverablesNote: 'Initial concept art completed. Full release in progress.',
+  },
+  {
+    title: 'Crypto Cookbook Vol. 1',
+    description: 'A digital zine of onchain recipes.',
+    category: 'Comics',
+    goal: 5,
+    raised: 1.2,
+    supporters: 5,
+    creatorAddress: '0xABC123...DEF',
+    status: 'Funding Open',
+    featured: false,
+    image: 'https://emerald-blushing-mouse-798.mypinata.cloud/ipfs/bafybeidp2eh6nzeazauqujz3xg3n3u53zm6bgkrlkxiku2demwraoe7f5m',
+    createdAt: now,
+    updatedAt: now,
+    deadline: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+    deliverablesMet: true,
+    deliverablesNote: 'Digital cookbook released and distributed to supporters.',
+  },
+  {
+    title: 'Experimental Music NFTs',
+    description: 'Generative audio experiences on chain.',
+    category: 'Music',
+    goal: 3,
+    raised: 2.69,
+    supporters: 20,
+    creatorAddress: '0x456DEF...789',
+    status: 'Funding Open',
+    featured: false,
+    image: 'https://emerald-blushing-mouse-798.mypinata.cloud/ipfs/bafybeic6mzx7joh3mrb6k3bvywxzxwvucqikcqzgc5jdvgcfiauoh34rdm',
+    createdAt: now,
+    updatedAt: now,
+    deadline: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000), // 30 days from now
+    deliverablesMet: false,
+    deliverablesNote: 'Still composing soundtracks and minting NFTs.',
+  }
   ];
 
   const backings = [

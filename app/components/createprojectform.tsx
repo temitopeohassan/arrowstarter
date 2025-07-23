@@ -6,9 +6,9 @@ import { X, ArrowRight, Upload } from "lucide-react";
 import { useAccount } from "wagmi";
 import { createProject, uploadFile } from "@/lib/api";
 import { useProjectRefresh } from "@/context/ProjectRefreshContext";
-import ProjectBasicsStep from "./steps/ProjectBasicsStep";
-import ProjectFundingStep from "./steps/ProjectFundingStep";
-import ProjectReviewStep from "./steps/ProjectReviewStep";
+import { ProjectBasicsStep } from "./steps/ProjectBasicsStep";
+import { ProjectFundingStep } from "./steps/ProjectFundingStep";
+import { ProjectReviewStep } from "./steps/ProjectReviewStep";
 
 const steps = ["Basics", "Funding", "Review"] as const;
 

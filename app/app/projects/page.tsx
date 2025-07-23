@@ -19,31 +19,32 @@ import {
 } from "@/components/ui/select";
 import { Film, Book, Music, Search } from "lucide-react";
 import Link from "next/link";
-// ...top imports unchanged
-import { Progress } from "@/components/ui/progress"; 
+import { Progress } from "@/components/ui/progress";
 import { API_BASE_URL } from "../config";
+import { BackProjectModal } from "../components/BackProjectModal"; // Adjust path as needed
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState([]);
+  const [projects, setProjects] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedProject, setSelectedProject] = useState<any | null>(null);
+
+  const fetchProjects = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/projects`);
+      if (!response.ok) throw new Error("Failed to fetch projects");
+      const data = await response.json();
+      setProjects(data);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/projects`);
-        if (!response.ok) throw new Error("Failed to fetch projects");
-        const data = await response.json();
-        setProjects(data);
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProjects();
   }, []);
 
@@ -92,7 +93,7 @@ export default function ProjectsPage() {
       {!loading && !error && (
         <>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProjects.map((project: any) => {
+            {filteredProjects.map((project) => {
               const percentRaised =
                 project.goal > 0
                   ? Math.round((project.raised / project.goal) * 100)
@@ -111,7 +112,7 @@ export default function ProjectsPage() {
                   <CardHeader>
                     <div className="flex items-center space-x-2 mb-2">
                       <span className="text-sm text-muted-foreground capitalize">
-                        {project.type}
+                        {project.category}
                       </span>
                     </div>
                     <CardTitle className="line-clamp-1">{project.title}</CardTitle>
@@ -140,12 +141,10 @@ export default function ProjectsPage() {
                     )}
 
                     {percentRaised === null && (
-                      <>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Raised</span>
-                          <span className="font-medium">{project.raised}</span>
-                        </div>
-                      </>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Raised</span>
+                        <span className="font-medium">{project.raised}</span>
+                      </div>
                     )}
 
                     <div className="flex justify-between text-sm">
@@ -157,13 +156,20 @@ export default function ProjectsPage() {
                       <span className="font-medium">{project.status}</span>
                     </div>
 
-                    <Button className="w-full mt-4" asChild>
-                      <Link href={`/projects/${project.id}`}>
-                        {project.status === "Funding Open"
-                          ? "Back This Project"
-                          : "View Project"}
-                      </Link>
-                    </Button>
+                    {project.status === "Funding Open" ? (
+                      <Button
+                        className="w-full mt-4"
+                        onClick={() => setSelectedProject(project)}
+                      >
+                        Back This Project
+                      </Button>
+                    ) : (
+                      <Button className="w-full mt-4" asChild>
+                        <Link href={`/projects/${project.id}`}>
+                          View Project
+                        </Link>
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               );
@@ -180,7 +186,23 @@ export default function ProjectsPage() {
           )}
         </>
       )}
+
+      {selectedProject && (
+        <BackProjectModal
+          isOpen={!!selectedProject}
+          onClose={() => setSelectedProject(null)}
+          project={{
+            id: selectedProject.id,
+            title: selectedProject.title,
+            goal: selectedProject.goal,
+            raised: selectedProject.raised,
+          }}
+          onSuccess={() => {
+            fetchProjects();
+            setSelectedProject(null);
+          }}
+        />
+      )}
     </div>
   );
 }
-

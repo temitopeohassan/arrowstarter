@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Film } from "lucide-react";
-import Link from "next/link";
+import { BackProjectModal } from "./BackProjectModal";
 import { API_BASE_URL } from "../app/config";
 
 type Project = {
@@ -26,23 +26,23 @@ export function HeroFeatured() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+
+  async function fetchFeaturedProjects() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/hero-featured`);
+      if (!response.ok) throw new Error("Failed to fetch featured projects");
+      const data: Project[] = await response.json();
+      setProjects(data);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function fetchFeaturedProjects() {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/hero-featured`);
-        if (!response.ok) throw new Error("Failed to fetch featured projects");
-        const data: Project[] = await response.json();
-        setProjects(data);
-      } catch (err: any) {
-        console.error(err);
-        setError(err.message || "An error occurred");
-      } finally {
-        setLoading(false);
-      }
-    }
-
     fetchFeaturedProjects();
   }, []);
 
@@ -145,7 +145,7 @@ export function HeroFeatured() {
                 <div className="flex gap-3">
                   <Button
                     className="h-11 rounded-md px-8"
-                    onClick={() => setShowModal(true)}
+                    onClick={() => setSelectedProject(project)}
                   >
                     Back This Project
                   </Button>
@@ -163,6 +163,23 @@ export function HeroFeatured() {
           </div>
         );
       })}
+
+      {selectedProject && (
+        <BackProjectModal
+          isOpen={!!selectedProject}
+          onClose={() => setSelectedProject(null)}
+          project={{
+            id: selectedProject.id,
+            title: selectedProject.title,
+            goal: selectedProject.goal,
+            raised: selectedProject.raised,
+          }}
+          onSuccess={() => {
+            fetchFeaturedProjects();
+            setSelectedProject(null);
+          }}
+        />
+      )}
     </div>
   );
 }

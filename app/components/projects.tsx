@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState } from "react";
 import { API_BASE_URL } from "../app/config";
-import { ProjectRefreshContext } from "@/context/ProjectRefreshContext";
 import { BackProjectModal } from "./BackProjectModal";
 
 type Project = {
@@ -24,8 +23,6 @@ export function Projects() {
   const [error, setError] = useState("");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
-  const { refreshKey } = useContext(ProjectRefreshContext);
-
   const fetchProjects = async () => {
     try {
       setIsLoading(true);
@@ -46,7 +43,7 @@ export function Projects() {
 
   useEffect(() => {
     fetchProjects();
-  }, [refreshKey]);
+  }, []);
 
   if (isLoading) {
     return (

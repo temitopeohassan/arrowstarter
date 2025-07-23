@@ -134,7 +134,11 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
             )}
 
             {step === "Review" && (
-              <ProjectReviewStep formData={formData} />
+              <ProjectReviewStep formData=<ProjectReviewStep
+  {...formData}
+  imagePreview={formData.imagePreview || null}
+  onBack={prevStep}
+  isLoading={isLoading} />
             )}
 
             {isUploading && (

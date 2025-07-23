@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { API_BASE_URL } from "../app/config";
+import { useProjectRefresh } from "@/context/ProjectRefreshContext";
 import { BackProjectModal } from "./BackProjectModal";
 
 type Project = {
@@ -23,14 +24,15 @@ export function Projects() {
   const [error, setError] = useState("");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
+  const { refreshCount } = useProjectRefresh();
+
+
   const fetchProjects = async () => {
     try {
       setIsLoading(true);
       setError("");
-
       const response = await fetch(`${API_BASE_URL}/api/projects`);
       if (!response.ok) throw new Error("Failed to fetch projects");
-
       const data = await response.json();
       setProjects(data);
     } catch (err) {
@@ -43,7 +45,7 @@ export function Projects() {
 
   useEffect(() => {
     fetchProjects();
-  }, []);
+  }, [refreshKey]);
 
   if (isLoading) {
     return (

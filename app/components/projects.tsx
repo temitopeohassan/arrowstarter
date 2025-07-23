@@ -45,7 +45,7 @@ export function Projects() {
 
   useEffect(() => {
     fetchProjects();
-  }, [refreshKey]);
+  }, [refreshCount]);
 
   if (isLoading) {
     return (

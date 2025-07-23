@@ -31,11 +31,17 @@ export function HeroFeatured() {
   const fetchFeaturedProjects = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/hero-featured`);
-      if (!res.ok) throw new Error("Failed to fetch featured projects");
+      if (!res.ok) {
+        throw new Error(`Server responded with ${res.status}`);
+      }
+
       const data: Project[] = await res.json();
+
+      // No featured projects? Just show the "no projects" UI
       setProjects(Array.isArray(data) ? data : []);
     } catch (err: any) {
-      setFetchError(err.message || "An error occurred");
+      console.error(err);
+      setFetchError(err.message || "An unexpected error occurred");
     } finally {
       setLoading(false);
     }

@@ -9,9 +9,9 @@ import { useProjectRefresh } from "@/context/ProjectRefreshContext";
 import { ProjectBasicsStep } from "./steps/ProjectBasicsStep";
 import { ProjectFundingStep } from "./steps/ProjectFundingStep";
 import { ProjectReviewStep } from "./steps/ProjectReviewStep";
+import { ProjectFormWithPreview } from "./steps/types"; // 👈 import correct type
 
 const steps = ["Basics", "Funding", "Review"] as const;
-
 type Step = (typeof steps)[number];
 
 interface CreateProjectFormProps {
@@ -24,26 +24,29 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
   const { triggerRefresh } = useProjectRefresh();
 
   const [step, setStep] = useState<Step>("Basics");
-  const [formData, setFormData] = useState({
+
+  const [formData, setFormData] = useState<ProjectFormWithPreview>({
     title: "",
     description: "",
     category: "",
     goal: "",
-    image: null as File | null,
-    imagePreview: "",
     threshold: "",
     maxCap: "",
-    deadline: "",
+    hasMaxCap: false,
+    hasDeadline: false,
+    fundingDeadline: "",
     deliveryDate: "",
-    minContribution: "",
+    fundingIncrements: "",
+    image: null,
+    imagePreview: "",
   });
+
   const [error, setError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-
   const isLoading = isUploading || isCreating;
 
-  const updateField = (field: string, value: any) => {
+  const updateField = (field: keyof ProjectFormWithPreview, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -66,8 +69,8 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
       setIsUploading(true);
 
       const uploadResult = await uploadFile(formData.image);
-
       setIsUploading(false);
+
       setIsCreating(true);
 
       await createProject({
@@ -80,7 +83,7 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
       });
 
       triggerRefresh();
-      if (onSuccess) onSuccess();
+      onSuccess?.();
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create project");
@@ -98,11 +101,13 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
         className="fixed z-50 bg-background shadow-lg transition ease-in-out duration-500 inset-y-0 right-0 h-full border-l slide-in-from-right w-full sm:max-w-xl md:max-w-2xl overflow-auto"
       >
         <div className="flex flex-col h-full">
+          {/* Header */}
           <div className="p-6 border-b">
             <h2 className="text-lg font-semibold">Create New Project</h2>
             <p className="text-sm text-muted-foreground">Step {steps.indexOf(step) + 1} of 3: {step}</p>
           </div>
 
+          {/* Main content */}
           <div className="flex-1 overflow-auto p-6">
             {error && (
               <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm mb-4">
@@ -121,15 +126,15 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
             {step === "Funding" && (
               <ProjectFundingStep
                 formData={formData}
-                updateField={updateField}
+                setFormData={(data) => setFormData((prev) => ({ ...prev, ...data }))}
+                onBack={prevStep}
+                onNext={nextStep}
                 isLoading={isLoading}
               />
             )}
 
             {step === "Review" && (
-              <ProjectReviewStep
-                formData={formData}
-              />
+              <ProjectReviewStep formData={formData} />
             )}
 
             {isUploading && (
@@ -145,6 +150,7 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
             )}
           </div>
 
+          {/* Footer */}
           <div className="p-6 border-t flex justify-between">
             {step !== "Basics" ? (
               <button onClick={prevStep} disabled={isLoading} className="btn-outline">
@@ -157,7 +163,11 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
             )}
 
             {step === "Review" ? (
-              <button onClick={handleLaunch} disabled={isLoading || !formData.image} className="btn-primary">
+              <button
+                onClick={handleLaunch}
+                disabled={isLoading || !formData.image}
+                className="btn-primary"
+              >
                 {isCreating ? "Creating..." : isUploading ? "Uploading..." : "Launch Project"}
               </button>
             ) : (
@@ -168,7 +178,12 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
           </div>
         </div>
 
-        <button onClick={onClose} disabled={isLoading} className="absolute right-4 top-4 opacity-70 hover:opacity-100">
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          disabled={isLoading}
+          className="absolute right-4 top-4 opacity-70 hover:opacity-100"
+        >
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </button>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, ChangeEvent, FormEvent } from 'react';
 import { ProjectFormData } from '@/types';
-import { logToServer } from '@/lib/log';
+import { logToServer } from '@/lib/logs';
 
 export default function CreateProjectForm() {
   const [formData, setFormData] = useState<ProjectFormData>({

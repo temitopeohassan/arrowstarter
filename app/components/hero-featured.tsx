@@ -30,10 +30,17 @@ export function HeroFeatured() {
 
   const fetchFeaturedProjects = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/hero-featured`);
-      if (!res.ok) {
-        throw new Error(`Server responded with ${res.status}`);
-      }
+const res = await fetch(`${API_BASE_URL}/api/hero-featured`);
+
+if (res.status === 404) {
+  setProjects([]); // No featured projects
+  return;
+}
+
+if (!res.ok) {
+  throw new Error(`Server responded with ${res.status}`);
+}
+
 
       const data: Project[] = await res.json();
 

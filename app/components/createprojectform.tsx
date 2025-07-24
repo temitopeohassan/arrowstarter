@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, ArrowRight, Upload } from "lucide-react";
 import { useAccount } from "wagmi";
 import { createProject, uploadFile } from "@/lib/api";
@@ -26,7 +26,6 @@ export default function CreateProjectForm({
   const { triggerRefresh } = useProjectRefresh();
 
   const [step, setStep] = useState<Step>("Basics");
-
   const [formData, setFormData] = useState<ProjectFormWithPreview>({
     title: "",
     description: "",
@@ -48,32 +47,49 @@ export default function CreateProjectForm({
   const [isCreating, setIsCreating] = useState(false);
   const isLoading = isUploading || isCreating;
 
+  useEffect(() => {
+    console.log("[CreateProjectForm] Initialized");
+  }, []);
+
   const updateField = (field: keyof ProjectFormWithPreview, value: any) => {
+    console.log(`[CreateProjectForm] updateField: ${field} =`, value);
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const nextStep = () => {
+    console.log("[CreateProjectForm] Moving to next step from:", step);
     if (step === "Basics") setStep("Funding");
     else if (step === "Funding") setStep("Review");
   };
 
   const prevStep = () => {
+    console.log("[CreateProjectForm] Moving to previous step from:", step);
     if (step === "Review") setStep("Funding");
     else if (step === "Funding") setStep("Basics");
   };
 
   const handleLaunch = async () => {
-    if (!address) return setError("Please connect your wallet");
-    if (!formData.image) return setError("Please select a cover image");
+    console.log("[CreateProjectForm] handleLaunch triggered");
+    if (!address) {
+      console.error("[CreateProjectForm] No wallet address found");
+      return setError("Please connect your wallet");
+    }
+    if (!formData.image) {
+      console.error("[CreateProjectForm] No image selected");
+      return setError("Please select a cover image");
+    }
 
     try {
       setError("");
       setIsUploading(true);
+      console.log("[CreateProjectForm] Uploading image to IPFS...");
 
       const uploadResult = await uploadFile(formData.image);
+      console.log("[CreateProjectForm] Image uploaded. IPFS URL:", uploadResult?.fileUrl);
       setIsUploading(false);
 
       setIsCreating(true);
+      console.log("[CreateProjectForm] Creating project with form data:", formData);
 
       await createProject({
         title: formData.title,
@@ -84,13 +100,14 @@ export default function CreateProjectForm({
         image: uploadResult.fileUrl,
       });
 
+      console.log("[CreateProjectForm] Project created successfully");
       triggerRefresh();
       onSuccess?.();
       onClose();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to create project"
-      );
+      const errorMessage = err instanceof Error ? err.message : "Failed to create project";
+      console.error("[CreateProjectForm] Error occurred:", errorMessage, err);
+      setError(errorMessage);
     } finally {
       setIsUploading(false);
       setIsCreating(false);
@@ -132,9 +149,10 @@ export default function CreateProjectForm({
             {step === "Funding" && (
               <ProjectFundingStep
                 formData={formData}
-                setFormData={(data) =>
-                  setFormData((prev) => ({ ...prev, ...data }))
-                }
+                setFormData={(data) => {
+                  console.log("[FundingStep] Updating form data:", data);
+                  setFormData((prev) => ({ ...prev, ...data }));
+                }}
                 onBack={prevStep}
                 onNext={nextStep}
                 isLoading={isLoading}
@@ -175,7 +193,10 @@ export default function CreateProjectForm({
               </button>
             ) : (
               <button
-                onClick={onClose}
+                onClick={() => {
+                  console.log("[CreateProjectForm] Cancel clicked");
+                  onClose();
+                }}
                 disabled={isLoading}
                 className="btn-outline"
               >
@@ -209,7 +230,10 @@ export default function CreateProjectForm({
 
         {/* Close button */}
         <button
-          onClick={onClose}
+          onClick={() => {
+            console.log("[CreateProjectForm] Close button clicked");
+            onClose();
+          }}
           disabled={isLoading}
           className="absolute right-4 top-4 opacity-70 hover:opacity-100"
         >

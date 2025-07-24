@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, ChangeEvent, FormEvent } from 'react';
-import { ProjectFormData } from '@/types';
+import { ProjectFormData } from './steps/types';
 import { logToServer } from '@/lib/logs';
 
 export default function CreateProjectForm() {

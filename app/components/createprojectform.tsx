@@ -1,93 +1,120 @@
-'use client';
+"use client";
 
-import { useEffect, useState, ChangeEvent, FormEvent } from 'react';
-import { ProjectFormData } from './steps/types';
-import { logToServer } from '@/lib/logs';
+import { useState } from "react";
+import { ProjectFormData } from "./steps/types";
+import { ProjectReviewStep } from "./project-review-step";
+import { log } from "@/lib/logs"; // ✅ Logging utility
+
+const initialFormData: ProjectFormData = {
+  title: "",
+  description: "",
+  category: "",
+  goal: "",
+  threshold: "",
+  maxCap: "",
+  hasMaxCap: false,
+  hasDeadline: false,
+  fundingDeadline: "",
+  deliveryDate: "",
+  fundingIncrements: "",
+  image: null,
+};
 
 export default function CreateProjectForm() {
-  const [formData, setFormData] = useState<ProjectFormData>({
-    title: '',
-    description: '',
-    category: '',
-    goal: '',
-    threshold: '',
-    maxCap: '',
-    hasMaxCap: false,
-    hasDeadline: false,
-    fundingDeadline: '',
-    deliveryDate: '',
-    fundingIncrements: '',
-    image: null,
-  });
+  const [formData, setFormData] = useState<ProjectFormData>(initialFormData);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const [step, setStep] = useState<"form" | "review">("form");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value, type } = e.target;
 
-  // Log mount
-  useEffect(() => {
-    console.log('[CreateProjectForm] Mounted');
-    logToServer('[CreateProjectForm] Mounted');
-  }, []);
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type, checked } = e.target;
-    const val = type === 'checkbox' ? checked : value;
-
-    setFormData(prev => ({
-      ...prev,
-      [name]: val,
-    }));
-
-    console.log(`[handleChange] ${name}:`, val);
-    logToServer(`[handleChange] ${name}: ${val}`);
+    if (type === "checkbox") {
+      const target = e.target as HTMLInputElement;
+      setFormData((prev) => ({ ...prev, [name]: target.checked }));
+      log(`[handleChange] Checkbox: ${name} → ${target.checked}`);
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+      log(`[handleChange] ${name} → ${value}`);
+    }
   };
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setFormData((prev) => ({ ...prev, image: file }));
 
-    setFormData(prev => ({
-      ...prev,
-      image: file,
-    }));
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+        log(`[handleImageChange] Preview ready for: ${file.name}`);
+      };
+      reader.readAsDataURL(file);
+    }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreviewImage(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-
-    console.log('[handleImageChange] Image selected:', file.name);
-    logToServer(`[handleImageChange] Image selected: ${file.name}`);
+    log("[handleImageChange] File selected:", file?.name || "none");
   };
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('[handleSubmit] Form submitted with:', formData);
-    await logToServer(`[handleSubmit] Data: ${JSON.stringify(formData, null, 2)}`);
-
-    // TODO: Add your API call logic here
+    log("[handleSubmit] Switching to review step");
+    log("[handleSubmit] FormData:", JSON.stringify(formData, null, 2));
+    setStep("review");
   };
+
+  const handleLaunch = async () => {
+    setIsLoading(true);
+    log("[handleLaunch] Launch initiated");
+    try {
+      await new Promise((res) => setTimeout(res, 2000));
+      log("[handleLaunch] Project launched successfully!");
+    } catch (error) {
+      log("[handleLaunch] Error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBack = () => {
+    log("[handleBack] Returning to form step");
+    setStep("form");
+  };
+
+  if (step === "review") {
+    return (
+      <ProjectReviewStep
+        title={formData.title}
+        description={formData.description}
+        category={formData.category}
+        goal={formData.goal}
+        imagePreview={imagePreview}
+        onBack={handleBack}
+        isLoading={isLoading}
+      />
+    );
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 p-4 max-w-xl mx-auto">
+    <form onSubmit={handleSubmit} className="space-y-4 p-4">
+      <h2 className="text-xl font-bold">Create New Project</h2>
+
       <input
         type="text"
         name="title"
         placeholder="Project Title"
         value={formData.title}
         onChange={handleChange}
-        className="w-full p-2 border rounded"
-        required
+        className="input"
       />
 
       <textarea
         name="description"
-        placeholder="Project Description"
+        placeholder="Description"
         value={formData.description}
         onChange={handleChange}
-        className="w-full p-2 border rounded"
-        rows={4}
-        required
+        className="input"
       />
 
       <input
@@ -96,60 +123,44 @@ export default function CreateProjectForm() {
         placeholder="Category"
         value={formData.category}
         onChange={handleChange}
-        className="w-full p-2 border rounded"
-        required
+        className="input"
       />
 
       <input
         type="number"
         name="goal"
-        placeholder="Funding Goal (ETH)"
+        placeholder="Goal (ETH)"
         value={formData.goal}
         onChange={handleChange}
-        className="w-full p-2 border rounded"
-        required
+        className="input"
       />
 
       <input
-        type="number"
-        name="threshold"
-        placeholder="Funding Threshold (ETH)"
-        value={formData.threshold}
+        type="checkbox"
+        name="hasMaxCap"
+        checked={formData.hasMaxCap}
         onChange={handleChange}
-        className="w-full p-2 border rounded"
-        required
-      />
-
-      <label className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          name="hasMaxCap"
-          checked={formData.hasMaxCap}
-          onChange={handleChange}
-        />
-        Has Max Cap?
-      </label>
+      />{" "}
+      Has Max Cap
 
       {formData.hasMaxCap && (
         <input
           type="number"
           name="maxCap"
-          placeholder="Maximum Cap (ETH)"
+          placeholder="Max Cap (ETH)"
           value={formData.maxCap}
           onChange={handleChange}
-          className="w-full p-2 border rounded"
+          className="input"
         />
       )}
 
-      <label className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          name="hasDeadline"
-          checked={formData.hasDeadline}
-          onChange={handleChange}
-        />
-        Set a Deadline?
-      </label>
+      <input
+        type="checkbox"
+        name="hasDeadline"
+        checked={formData.hasDeadline}
+        onChange={handleChange}
+      />{" "}
+      Has Deadline
 
       {formData.hasDeadline && (
         <input
@@ -157,44 +168,36 @@ export default function CreateProjectForm() {
           name="fundingDeadline"
           value={formData.fundingDeadline}
           onChange={handleChange}
-          className="w-full p-2 border rounded"
+          className="input"
         />
       )}
 
       <input
         type="date"
         name="deliveryDate"
-        placeholder="Delivery Date"
         value={formData.deliveryDate}
         onChange={handleChange}
-        className="w-full p-2 border rounded"
+        className="input"
       />
 
       <input
         type="number"
         name="fundingIncrements"
-        placeholder="Funding Increments (ETH)"
+        placeholder="Funding Increments"
         value={formData.fundingIncrements}
         onChange={handleChange}
-        className="w-full p-2 border rounded"
+        className="input"
       />
 
       <input
         type="file"
         accept="image/*"
         onChange={handleImageChange}
-        className="w-full"
+        className="input"
       />
 
-      {previewImage && (
-        <img src={previewImage} alt="Preview" className="w-full h-auto rounded border" />
-      )}
-
-      <button
-        type="submit"
-        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded"
-      >
-        Submit Project
+      <button type="submit" className="btn-primary">
+        Next
       </button>
     </form>
   );

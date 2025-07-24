@@ -1,204 +1,252 @@
 "use client";
 
 import { useState } from "react";
-import { ProjectFormData } from "./steps/types";
-import { ProjectReviewStep } from "./project-review-step";
+import { X, ArrowRight, Upload } from "lucide-react";
+import { useAccount } from "wagmi";
+import { createProject, uploadFile } from "@/lib/api";
+import { useProjectRefresh } from "@/context/ProjectRefreshContext";
+import { ProjectBasicsStep } from "./steps/ProjectBasicsStep";
+import { ProjectFundingStep } from "./steps/ProjectFundingStep";
+import { ProjectReviewStep } from "./steps/ProjectReviewStep";
+import { ProjectFormWithPreview } from "./steps/types";
 import { log } from "@/lib/logs"; // ✅ Logging utility
 
-const initialFormData: ProjectFormData = {
-  title: "",
-  description: "",
-  category: "",
-  goal: "",
-  threshold: "",
-  maxCap: "",
-  hasMaxCap: false,
-  hasDeadline: false,
-  fundingDeadline: "",
-  deliveryDate: "",
-  fundingIncrements: "",
-  image: null,
-};
+const steps = ["Basics", "Funding", "Review"] as const;
+type Step = (typeof steps)[number];
 
-export default function CreateProjectForm() {
-  const [formData, setFormData] = useState<ProjectFormData>(initialFormData);
-  const [imagePreview, setImagePreview] = useState<string>("");
-  const [step, setStep] = useState<"form" | "review">("form");
-  const [isLoading, setIsLoading] = useState(false);
+interface CreateProjectFormProps {
+  onClose: () => void;
+  onSuccess?: () => void;
+}
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value, type } = e.target;
+export default function CreateProjectForm({
+  onClose,
+  onSuccess,
+}: CreateProjectFormProps) {
+  const { address } = useAccount();
+  const { triggerRefresh } = useProjectRefresh();
 
-    if (type === "checkbox") {
-      const target = e.target as HTMLInputElement;
-      setFormData((prev) => ({ ...prev, [name]: target.checked }));
-      log(`[handleChange] Checkbox: ${name} → ${target.checked}`);
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
-      log(`[handleChange] ${name} → ${value}`);
+  const [step, setStep] = useState<Step>("Basics");
+
+  const [formData, setFormData] = useState<ProjectFormWithPreview>({
+    title: "",
+    description: "",
+    category: "",
+    goal: "",
+    threshold: "",
+    maxCap: "",
+    hasMaxCap: false,
+    hasDeadline: false,
+    fundingDeadline: "",
+    deliveryDate: "",
+    fundingIncrements: "",
+    image: null,
+    imagePreview: "",
+  });
+
+  const [error, setError] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const isLoading = isUploading || isCreating;
+
+  const updateField = (field: keyof ProjectFormWithPreview, value: any) => {
+    log(`[updateField] ${field} → ${JSON.stringify(value)}`);
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const nextStep = () => {
+    const next =
+      step === "Basics" ? "Funding" : step === "Funding" ? "Review" : null;
+    if (next) {
+      log(`[nextStep] Transitioning from ${step} to ${next}`);
+      setStep(next);
     }
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    setFormData((prev) => ({ ...prev, image: file }));
-
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-        log(`[handleImageChange] Preview ready for: ${file.name}`);
-      };
-      reader.readAsDataURL(file);
+  const prevStep = () => {
+    const prev =
+      step === "Review" ? "Funding" : step === "Funding" ? "Basics" : null;
+    if (prev) {
+      log(`[prevStep] Returning from ${step} to ${prev}`);
+      setStep(prev);
     }
-
-    log("[handleImageChange] File selected:", file?.name || "none");
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    log("[handleSubmit] Switching to review step");
-    log("[handleSubmit] FormData:", JSON.stringify(formData, null, 2));
-    setStep("review");
   };
 
   const handleLaunch = async () => {
-    setIsLoading(true);
-    log("[handleLaunch] Launch initiated");
+    if (!address) {
+      setError("Please connect your wallet");
+      log("[handleLaunch] Error: Wallet not connected");
+      return;
+    }
+
+    if (!formData.image) {
+      setError("Please select a cover image");
+      log("[handleLaunch] Error: No image selected");
+      return;
+    }
+
     try {
-      await new Promise((res) => setTimeout(res, 2000));
-      log("[handleLaunch] Project launched successfully!");
-    } catch (error) {
-      log("[handleLaunch] Error:", error);
+      setError("");
+      log("[handleLaunch] Uploading image to IPFS...");
+      setIsUploading(true);
+
+      const uploadResult = await uploadFile(formData.image);
+      setIsUploading(false);
+      log(`[handleLaunch] Image uploaded to ${uploadResult.fileUrl}`);
+
+      setIsCreating(true);
+      log("[handleLaunch] Creating project with form data:", JSON.stringify(formData, null, 2));
+
+      await createProject({
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        goal: parseFloat(formData.goal),
+        creatorAddress: address,
+        image: uploadResult.fileUrl,
+      });
+
+      log("[handleLaunch] Project successfully created");
+      triggerRefresh();
+      onSuccess?.();
+      onClose();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to create project";
+      setError(message);
+      log("[handleLaunch] Error:", message);
     } finally {
-      setIsLoading(false);
+      setIsUploading(false);
+      setIsCreating(false);
     }
   };
 
-  const handleBack = () => {
-    log("[handleBack] Returning to form step");
-    setStep("form");
-  };
-
-  if (step === "review") {
-    return (
-      <ProjectReviewStep
-        title={formData.title}
-        description={formData.description}
-        category={formData.category}
-        goal={formData.goal}
-        imagePreview={imagePreview}
-        onBack={handleBack}
-        isLoading={isLoading}
-      />
-    );
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 p-4">
-      <h2 className="text-xl font-bold">Create New Project</h2>
+    <>
+      <div className="fixed inset-0 z-50 bg-black/80 animate-in fade-in-0" />
+      <div
+        role="dialog"
+        className="fixed z-50 bg-background shadow-lg transition ease-in-out duration-500 inset-y-0 right-0 h-full border-l slide-in-from-right w-full sm:max-w-xl md:max-w-2xl overflow-auto"
+      >
+        <div className="flex flex-col h-full">
+          {/* Header */}
+          <div className="p-6 border-b">
+            <h2 className="text-lg font-semibold">Create New Project</h2>
+            <p className="text-sm text-muted-foreground">
+              Step {steps.indexOf(step) + 1} of 3: {step}
+            </p>
+          </div>
 
-      <input
-        type="text"
-        name="title"
-        placeholder="Project Title"
-        value={formData.title}
-        onChange={handleChange}
-        className="input"
-      />
+          {/* Main content */}
+          <div className="flex-1 overflow-auto p-6">
+            {error && (
+              <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm mb-4">
+                {error}
+              </div>
+            )}
 
-      <textarea
-        name="description"
-        placeholder="Description"
-        value={formData.description}
-        onChange={handleChange}
-        className="input"
-      />
+            {step === "Basics" && (
+              <ProjectBasicsStep
+                formData={formData}
+                updateField={updateField}
+                isLoading={isLoading}
+              />
+            )}
 
-      <input
-        type="text"
-        name="category"
-        placeholder="Category"
-        value={formData.category}
-        onChange={handleChange}
-        className="input"
-      />
+            {step === "Funding" && (
+              <ProjectFundingStep
+                formData={formData}
+                setFormData={(data) =>
+                  setFormData((prev) => ({ ...prev, ...data }))
+                }
+                onBack={prevStep}
+                onNext={nextStep}
+                isLoading={isLoading}
+              />
+            )}
 
-      <input
-        type="number"
-        name="goal"
-        placeholder="Goal (ETH)"
-        value={formData.goal}
-        onChange={handleChange}
-        className="input"
-      />
+            {step === "Review" && (
+              <ProjectReviewStep
+                {...formData}
+                imagePreview={formData.imagePreview || null}
+                onBack={prevStep}
+                isLoading={isLoading}
+              />
+            )}
 
-      <input
-        type="checkbox"
-        name="hasMaxCap"
-        checked={formData.hasMaxCap}
-        onChange={handleChange}
-      />{" "}
-      Has Max Cap
+            {isUploading && (
+              <div className="mt-4 space-y-1">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Upload className="h-4 w-4 animate-pulse" />
+                  Uploading image to IPFS...
+                </div>
+                <div className="w-full h-2 bg-muted rounded-full">
+                  <div className="h-2 bg-primary rounded-full animate-pulse w-1/2" />
+                </div>
+              </div>
+            )}
+          </div>
 
-      {formData.hasMaxCap && (
-        <input
-          type="number"
-          name="maxCap"
-          placeholder="Max Cap (ETH)"
-          value={formData.maxCap}
-          onChange={handleChange}
-          className="input"
-        />
-      )}
+          {/* Footer */}
+          <div className="p-6 border-t flex justify-between">
+            {step !== "Basics" ? (
+              <button
+                onClick={prevStep}
+                disabled={isLoading}
+                className="btn-outline"
+              >
+                Back
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  log("[onClose] User cancelled project creation");
+                  onClose();
+                }}
+                disabled={isLoading}
+                className="btn-outline"
+              >
+                Cancel
+              </button>
+            )}
 
-      <input
-        type="checkbox"
-        name="hasDeadline"
-        checked={formData.hasDeadline}
-        onChange={handleChange}
-      />{" "}
-      Has Deadline
+            {step === "Review" ? (
+              <button
+                onClick={handleLaunch}
+                disabled={isLoading || !formData.image}
+                className="btn-primary"
+              >
+                {isCreating
+                  ? "Creating..."
+                  : isUploading
+                  ? "Uploading..."
+                  : "Launch Project"}
+              </button>
+            ) : (
+              <button
+                onClick={nextStep}
+                disabled={isLoading}
+                className="btn-primary"
+              >
+                Next <ArrowRight className="ml-2 h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
 
-      {formData.hasDeadline && (
-        <input
-          type="date"
-          name="fundingDeadline"
-          value={formData.fundingDeadline}
-          onChange={handleChange}
-          className="input"
-        />
-      )}
-
-      <input
-        type="date"
-        name="deliveryDate"
-        value={formData.deliveryDate}
-        onChange={handleChange}
-        className="input"
-      />
-
-      <input
-        type="number"
-        name="fundingIncrements"
-        placeholder="Funding Increments"
-        value={formData.fundingIncrements}
-        onChange={handleChange}
-        className="input"
-      />
-
-      <input
-        type="file"
-        accept="image/*"
-        onChange={handleImageChange}
-        className="input"
-      />
-
-      <button type="submit" className="btn-primary">
-        Next
-      </button>
-    </form>
+        {/* Close button */}
+        <button
+          onClick={() => {
+            log("[onClose] Close button clicked");
+            onClose();
+          }}
+          disabled={isLoading}
+          className="absolute right-4 top-4 opacity-70 hover:opacity-100"
+        >
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </button>
+      </div>
+    </>
   );
 }

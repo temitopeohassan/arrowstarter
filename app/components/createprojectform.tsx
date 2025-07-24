@@ -1,246 +1,201 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { X, ArrowRight, Upload } from "lucide-react";
-import { useAccount } from "wagmi";
-import { createProject, uploadFile } from "@/lib/api";
-import { useProjectRefresh } from "@/context/ProjectRefreshContext";
-import { ProjectBasicsStep } from "./steps/ProjectBasicsStep";
-import { ProjectFundingStep } from "./steps/ProjectFundingStep";
-import { ProjectReviewStep } from "./steps/ProjectReviewStep";
-import { ProjectFormWithPreview } from "./steps/types";
+import { useEffect, useState, ChangeEvent, FormEvent } from 'react';
+import { ProjectFormData } from '@/types';
+import { logToServer } from '@/lib/log';
 
-const steps = ["Basics", "Funding", "Review"] as const;
-type Step = (typeof steps)[number];
-
-interface CreateProjectFormProps {
-  onClose: () => void;
-  onSuccess?: () => void;
-}
-
-export default function CreateProjectForm({
-  onClose,
-  onSuccess,
-}: CreateProjectFormProps) {
-  const { address } = useAccount();
-  const { triggerRefresh } = useProjectRefresh();
-
-  const [step, setStep] = useState<Step>("Basics");
-  const [formData, setFormData] = useState<ProjectFormWithPreview>({
-    title: "",
-    description: "",
-    category: "",
-    goal: "",
-    threshold: "",
-    maxCap: "",
+export default function CreateProjectForm() {
+  const [formData, setFormData] = useState<ProjectFormData>({
+    title: '',
+    description: '',
+    category: '',
+    goal: '',
+    threshold: '',
+    maxCap: '',
     hasMaxCap: false,
     hasDeadline: false,
-    fundingDeadline: "",
-    deliveryDate: "",
-    fundingIncrements: "",
+    fundingDeadline: '',
+    deliveryDate: '',
+    fundingIncrements: '',
     image: null,
-    imagePreview: "",
   });
 
-  const [error, setError] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
-  const isLoading = isUploading || isCreating;
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
+  // Log mount
   useEffect(() => {
-    console.log("[CreateProjectForm] Initialized");
+    console.log('[CreateProjectForm] Mounted');
+    logToServer('[CreateProjectForm] Mounted');
   }, []);
 
-  const updateField = (field: keyof ProjectFormWithPreview, value: any) => {
-    console.log(`[CreateProjectForm] updateField: ${field} =`, value);
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, type, checked } = e.target;
+    const val = type === 'checkbox' ? checked : value;
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: val,
+    }));
+
+    console.log(`[handleChange] ${name}:`, val);
+    logToServer(`[handleChange] ${name}: ${val}`);
   };
 
-  const nextStep = () => {
-    console.log("[CreateProjectForm] Moving to next step from:", step);
-    if (step === "Basics") setStep("Funding");
-    else if (step === "Funding") setStep("Review");
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setFormData(prev => ({
+      ...prev,
+      image: file,
+    }));
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewImage(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    console.log('[handleImageChange] Image selected:', file.name);
+    logToServer(`[handleImageChange] Image selected: ${file.name}`);
   };
 
-  const prevStep = () => {
-    console.log("[CreateProjectForm] Moving to previous step from:", step);
-    if (step === "Review") setStep("Funding");
-    else if (step === "Funding") setStep("Basics");
-  };
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    console.log('[handleSubmit] Form submitted with:', formData);
+    await logToServer(`[handleSubmit] Data: ${JSON.stringify(formData, null, 2)}`);
 
-  const handleLaunch = async () => {
-    console.log("[CreateProjectForm] handleLaunch triggered");
-    if (!address) {
-      console.error("[CreateProjectForm] No wallet address found");
-      return setError("Please connect your wallet");
-    }
-    if (!formData.image) {
-      console.error("[CreateProjectForm] No image selected");
-      return setError("Please select a cover image");
-    }
-
-    try {
-      setError("");
-      setIsUploading(true);
-      console.log("[CreateProjectForm] Uploading image to IPFS...");
-
-      const uploadResult = await uploadFile(formData.image);
-      console.log("[CreateProjectForm] Image uploaded. IPFS URL:", uploadResult?.fileUrl);
-      setIsUploading(false);
-
-      setIsCreating(true);
-      console.log("[CreateProjectForm] Creating project with form data:", formData);
-
-      await createProject({
-        title: formData.title,
-        description: formData.description,
-        category: formData.category,
-        goal: parseFloat(formData.goal),
-        creatorAddress: address,
-        image: uploadResult.fileUrl,
-      });
-
-      console.log("[CreateProjectForm] Project created successfully");
-      triggerRefresh();
-      onSuccess?.();
-      onClose();
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to create project";
-      console.error("[CreateProjectForm] Error occurred:", errorMessage, err);
-      setError(errorMessage);
-    } finally {
-      setIsUploading(false);
-      setIsCreating(false);
-    }
+    // TODO: Add your API call logic here
   };
 
   return (
-    <>
-      <div className="fixed inset-0 z-50 bg-black/80 animate-in fade-in-0" />
-      <div
-        role="dialog"
-        className="fixed z-50 bg-background shadow-lg transition ease-in-out duration-500 inset-y-0 right-0 h-full border-l slide-in-from-right w-full sm:max-w-xl md:max-w-2xl overflow-auto"
+    <form onSubmit={handleSubmit} className="space-y-4 p-4 max-w-xl mx-auto">
+      <input
+        type="text"
+        name="title"
+        placeholder="Project Title"
+        value={formData.title}
+        onChange={handleChange}
+        className="w-full p-2 border rounded"
+        required
+      />
+
+      <textarea
+        name="description"
+        placeholder="Project Description"
+        value={formData.description}
+        onChange={handleChange}
+        className="w-full p-2 border rounded"
+        rows={4}
+        required
+      />
+
+      <input
+        type="text"
+        name="category"
+        placeholder="Category"
+        value={formData.category}
+        onChange={handleChange}
+        className="w-full p-2 border rounded"
+        required
+      />
+
+      <input
+        type="number"
+        name="goal"
+        placeholder="Funding Goal (ETH)"
+        value={formData.goal}
+        onChange={handleChange}
+        className="w-full p-2 border rounded"
+        required
+      />
+
+      <input
+        type="number"
+        name="threshold"
+        placeholder="Funding Threshold (ETH)"
+        value={formData.threshold}
+        onChange={handleChange}
+        className="w-full p-2 border rounded"
+        required
+      />
+
+      <label className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          name="hasMaxCap"
+          checked={formData.hasMaxCap}
+          onChange={handleChange}
+        />
+        Has Max Cap?
+      </label>
+
+      {formData.hasMaxCap && (
+        <input
+          type="number"
+          name="maxCap"
+          placeholder="Maximum Cap (ETH)"
+          value={formData.maxCap}
+          onChange={handleChange}
+          className="w-full p-2 border rounded"
+        />
+      )}
+
+      <label className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          name="hasDeadline"
+          checked={formData.hasDeadline}
+          onChange={handleChange}
+        />
+        Set a Deadline?
+      </label>
+
+      {formData.hasDeadline && (
+        <input
+          type="date"
+          name="fundingDeadline"
+          value={formData.fundingDeadline}
+          onChange={handleChange}
+          className="w-full p-2 border rounded"
+        />
+      )}
+
+      <input
+        type="date"
+        name="deliveryDate"
+        placeholder="Delivery Date"
+        value={formData.deliveryDate}
+        onChange={handleChange}
+        className="w-full p-2 border rounded"
+      />
+
+      <input
+        type="number"
+        name="fundingIncrements"
+        placeholder="Funding Increments (ETH)"
+        value={formData.fundingIncrements}
+        onChange={handleChange}
+        className="w-full p-2 border rounded"
+      />
+
+      <input
+        type="file"
+        accept="image/*"
+        onChange={handleImageChange}
+        className="w-full"
+      />
+
+      {previewImage && (
+        <img src={previewImage} alt="Preview" className="w-full h-auto rounded border" />
+      )}
+
+      <button
+        type="submit"
+        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded"
       >
-        <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="p-6 border-b">
-            <h2 className="text-lg font-semibold">Create New Project</h2>
-            <p className="text-sm text-muted-foreground">
-              Step {steps.indexOf(step) + 1} of 3: {step}
-            </p>
-          </div>
-
-          {/* Main content */}
-          <div className="flex-1 overflow-auto p-6">
-            {error && (
-              <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm mb-4">
-                {error}
-              </div>
-            )}
-
-            {step === "Basics" && (
-              <ProjectBasicsStep
-                formData={formData}
-                updateField={updateField}
-                isLoading={isLoading}
-              />
-            )}
-
-            {step === "Funding" && (
-              <ProjectFundingStep
-                formData={formData}
-                setFormData={(data) => {
-                  console.log("[FundingStep] Updating form data:", data);
-                  setFormData((prev) => ({ ...prev, ...data }));
-                }}
-                onBack={prevStep}
-                onNext={nextStep}
-                isLoading={isLoading}
-              />
-            )}
-
-            {step === "Review" && (
-              <ProjectReviewStep
-                {...formData}
-                imagePreview={formData.imagePreview || null}
-                onBack={prevStep}
-                isLoading={isLoading}
-              />
-            )}
-
-            {isUploading && (
-              <div className="mt-4 space-y-1">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Upload className="h-4 w-4 animate-pulse" />
-                  Uploading image to IPFS...
-                </div>
-                <div className="w-full h-2 bg-muted rounded-full">
-                  <div className="h-2 bg-primary rounded-full animate-pulse w-1/2" />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="p-6 border-t flex justify-between">
-            {step !== "Basics" ? (
-              <button
-                onClick={prevStep}
-                disabled={isLoading}
-                className="btn-outline"
-              >
-                Back
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  console.log("[CreateProjectForm] Cancel clicked");
-                  onClose();
-                }}
-                disabled={isLoading}
-                className="btn-outline"
-              >
-                Cancel
-              </button>
-            )}
-
-            {step === "Review" ? (
-              <button
-                onClick={handleLaunch}
-                disabled={isLoading || !formData.image}
-                className="btn-primary"
-              >
-                {isCreating
-                  ? "Creating..."
-                  : isUploading
-                  ? "Uploading..."
-                  : "Launch Project"}
-              </button>
-            ) : (
-              <button
-                onClick={nextStep}
-                disabled={isLoading}
-                className="btn-primary"
-              >
-                Next <ArrowRight className="ml-2 h-4 w-4" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Close button */}
-        <button
-          onClick={() => {
-            console.log("[CreateProjectForm] Close button clicked");
-            onClose();
-          }}
-          disabled={isLoading}
-          className="absolute right-4 top-4 opacity-70 hover:opacity-100"
-        >
-          <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
-        </button>
-      </div>
-    </>
+        Submit Project
+      </button>
+    </form>
   );
 }

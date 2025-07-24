@@ -1,5 +1,4 @@
-// lib/log.ts
-export async function logToServer(message: string) {
+export async function log(message: string) {
   try {
     await fetch("/api/logs", {
       method: "POST",
@@ -7,6 +6,6 @@ export async function logToServer(message: string) {
       body: JSON.stringify({ message }),
     });
   } catch (err) {
-    console.error("[logToServer] failed:", err);
+    console.error("[log] failed:", err);
   }
 }

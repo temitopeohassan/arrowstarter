@@ -8,6 +8,7 @@ const { getFirestore } = require("firebase-admin/firestore");
 const { PinataSDK } = require("pinata-web3");
 const { mintRoughDraftNFTHandler } = require("./src/routes/mintRoughDraftNFT");
 
+
 dotenv.config();
 
 const app = express();

@@ -19,13 +19,12 @@ export type Project = {
   ownerAddress: string;
   image: string;
   goal: number;
-  raised: number; // ✅ Add this
-  status: "draft" | "live" | "completed" | "cancelled"; // ✅ Add this
+  raised: number;
+  status: "draft" | "live" | "completed" | "cancelled";
   creatorAddress: string;
   fundingGoal: number;
   totalBacked: number;
   backersCount: number;
-  // Add more fields as needed
 };
 
 // 🔨 Project APIs
@@ -123,30 +122,39 @@ export async function backProject(
 
 // 🪙 NFT Minting
 
-export async function mintRoughDraftNFT(data: {
+type MintRoughDraftNFTInput = {
   projectId: string;
   title: string;
   description: string;
   creatorAddress: string;
   image: File;
-  metadata?: Record<string, any>; // optional and flexible
-}) {
-  const formData = new FormData();
-  formData.append("projectId", data.projectId);
-  formData.append("title", data.title);
-  formData.append("description", data.description);
-  formData.append("creatorAddress", data.creatorAddress);
-  formData.append("image", data.image); // 👈 this is the key!
+  metadata?: Record<string, any>; // for future use if needed
+};
 
-  const response = await axios.post(`${API_BASE_URL}/api/mint-create`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+export async function mintRoughDraftNFT(data: MintRoughDraftNFTInput): Promise<{ success: boolean; tokenId: string }> {
+  try {
+    log("Minting RoughDraftNFT", data);
 
-  return response.data;
+    const formData = new FormData();
+    formData.append("projectId", data.projectId);
+    formData.append("title", data.title);
+    formData.append("description", data.description);
+    formData.append("creatorAddress", data.creatorAddress);
+    formData.append("image", data.image);
+
+    const response = await axios.post(`${API_BASE_URL}/api/mint-create`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    log("RoughDraftNFT minted", response.data);
+    return response.data;
+  } catch (error: any) {
+    log("Error minting RoughDraftNFT", error.response?.data || error.message);
+    throw error;
+  }
 }
-
 
 // 📁 File Upload
 

@@ -6,11 +6,24 @@ const { getFirestore } = require("firebase-admin/firestore");
 const { initializeApp, cert, getApps } = require("firebase-admin/app");
 require("dotenv").config();
 
-// Firebase initialization
+// Dynamic service account setup using env variables
+const serviceAccount = {
+  type: "service_account",
+  project_id: process.env.FIREBASE_PROJECT_ID,
+  private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+  private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+  client_email: process.env.FIREBASE_CLIENT_EMAIL,
+  client_id: process.env.FIREBASE_CLIENT_ID,
+  auth_uri: process.env.FIREBASE_AUTH_URI,
+  token_uri: process.env.FIREBASE_TOKEN_URI,
+  auth_provider_x509_cert_url: process.env.FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
+  client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL,
+  universe_domain: process.env.FIREBASE_UNIVERSE_DOMAIN,
+};
+
+// Initialize Firebase
 if (!getApps().length) {
-  initializeApp({
-    credential: cert(require("../../firebase-service-account.json")), // adjust path if needed
-  });
+  initializeApp({ credential: cert(serviceAccount) });
 }
 const db = getFirestore();
 
@@ -18,19 +31,13 @@ const db = getFirestore();
 const { abi: ROUGHDRAFT_NFT_ABI } = require("../abis/RoughDraftNFT.json");
 const ROUGHDRAFT_NFT_ADDRESS = process.env.ROUGHDRAFT_NFT_ADDRESS;
 
-// Setup Pinata client
+// Pinata and ethers setup
 const pinata = new PinataSDK(process.env.PINATA_API_KEY, process.env.PINATA_SECRET_API_KEY);
-
-// Setup Ethereum provider and signer
 const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
-const roughDraftNFT = new ethers.Contract(
-  ROUGHDRAFT_NFT_ADDRESS,
-  ROUGHDRAFT_NFT_ABI,
-  wallet
-);
+const roughDraftNFT = new ethers.Contract(ROUGHDRAFT_NFT_ADDRESS, ROUGHDRAFT_NFT_ABI, wallet);
 
-// Setup multer for image file upload (in memory)
+// Multer for image upload
 const upload = multer({ storage: multer.memoryStorage() });
 
 const mintRoughDraftNFTHandler = [
@@ -86,13 +93,12 @@ const mintRoughDraftNFTHandler = [
         console.warn("Base URI set might have failed or already set:", err.reason || err.message);
       }
 
-      // Mint the NFT
+      // Mint NFT
       const tx = await roughDraftNFT.mint(creatorAddress);
       const receipt = await tx.wait();
 
       const mintEvent = receipt.logs.find(
-        (log) =>
-          log.topics[0] === roughDraftNFT.interface.getEventTopic("DraftMinted")
+        (log) => log.topics[0] === roughDraftNFT.interface.getEventTopic("DraftMinted")
       );
       const tokenId = mintEvent
         ? ethers.getBigInt(mintEvent.topics[2]).toString()
@@ -107,7 +113,7 @@ const mintRoughDraftNFTHandler = [
         creatorAddress,
         tokenId,
         tokenURI,
-        imageURI, // 🔥 ensure this gets saved
+        imageURI,
         createdAt: new Date().toISOString(),
       });
 

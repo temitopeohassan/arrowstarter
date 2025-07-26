@@ -17,6 +17,9 @@ export type Project = {
   createdAt: string;
   updatedAt?: string;
   ownerAddress: string;
+  image: string;
+  goal: number;
+  creatorAddress: string;
   fundingGoal: number;
   totalBacked: number;
   backersCount: number;

@@ -1,28 +1,40 @@
-// ProjectBasicsStep.tsx
 import { Upload, X } from "lucide-react";
+import { ProjectFormWithPreview } from "./types";
+
+interface ProjectBasicsStepProps {
+  formData: ProjectFormWithPreview;
+  updateField: (field: keyof ProjectFormWithPreview, value: any) => void;
+  isLoading: boolean;
+}
 
 export function ProjectBasicsStep({
-  title,
-  setTitle,
-  description,
-  setDescription,
-  category,
-  setCategory,
-  image,
-  imagePreview,
-  isUploading,
+  formData,
+  updateField,
   isLoading,
-  error,
-  handleImageChange,
-  removeImage
-}: any) {
+}: ProjectBasicsStepProps) {
+  const {
+    title,
+    description,
+    category,
+    image,
+    imagePreview,
+  } = formData;
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      updateField("image", file);
+      updateField("imagePreview", URL.createObjectURL(file));
+    }
+  };
+
+  const removeImage = () => {
+    updateField("image", null);
+    updateField("imagePreview", "");
+  };
+
   return (
     <div className="space-y-6">
-      {error && (
-        <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm">
-          {error}
-        </div>
-      )}
       <div className="space-y-2">
         <label htmlFor="title" className="text-sm font-medium">
           Project Title <span className="text-destructive">*</span>
@@ -30,7 +42,7 @@ export function ProjectBasicsStep({
         <input
           id="title"
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={(e) => updateField("title", e.target.value)}
           placeholder="Your creative project title"
           required
           disabled={isLoading}
@@ -46,7 +58,7 @@ export function ProjectBasicsStep({
         <textarea
           id="description"
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={(e) => updateField("description", e.target.value)}
           maxLength={500}
           required
           disabled={isLoading}
@@ -62,7 +74,7 @@ export function ProjectBasicsStep({
         <select
           id="category"
           value={category}
-          onChange={(e) => setCategory(e.target.value)}
+          onChange={(e) => updateField("category", e.target.value)}
           required
           disabled={isLoading}
           className="input"
@@ -76,10 +88,12 @@ export function ProjectBasicsStep({
         </select>
       </div>
 
+      {/* Cover Image Upload Section */}
       <div className="space-y-2">
         <label className="text-sm font-medium">
           Cover Image/Icon <span className="text-destructive">*</span>
         </label>
+
         {!imagePreview ? (
           <div className="upload-box">
             <Upload className="h-6 w-6 text-muted-foreground mb-2" />

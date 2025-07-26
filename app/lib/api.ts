@@ -122,18 +122,27 @@ export async function backProject(
 
 // 🪙 NFT Minting
 
-type MintRoughDraftNFTInput = {
+export type MintRoughDraftNFTInput = {
   projectId: string;
   title: string;
   description: string;
   creatorAddress: string;
   image: File;
-  metadata?: Record<string, any>; // for future use if needed
+  metadata?: {
+    name: string;
+    description: string;
+    image: string;
+  };
 };
 
 export async function mintRoughDraftNFT(data: MintRoughDraftNFTInput): Promise<{ success: boolean; tokenId: string }> {
   try {
-    log("Minting RoughDraftNFT", data);
+    log("Minting RoughDraftNFT", {
+      projectId: data.projectId,
+      title: data.title,
+      description: data.description,
+      creatorAddress: data.creatorAddress,
+    });
 
     const formData = new FormData();
     formData.append("projectId", data.projectId);

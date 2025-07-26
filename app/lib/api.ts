@@ -1,164 +1,132 @@
-const API_BASE_URL = 'https://arrowstarter-backend.vercel.app/api';
+// lib/api.ts
+import axios from "axios";
 
-export interface Project {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  goal: number;
-  raised: number;
-  supporters: number;
-  status: string;
-  creatorAddress: string;
-  createdAt: Date;
-  updatedAt: Date;
-  image?: string;
-  featured?: boolean;
-  tokenId?: string;
-  metadataUri?: string;
-}
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
-export interface Backing {
-  projectId: string;
-  backerAddress: string;
-  amount: number;
-  createdAt: Date;
-}
+const log = (label: string, payload?: any) => {
+  console.log(`[API] ${label}`, payload ?? "");
+};
 
-export interface UploadResult {
-  message: string;
-  ipfsHash: string;
-  fileUrl: string;
-  filename: string;
-  size: number;
-  pinataUrl: string;
-}
+// 🔨 Project APIs
 
-export interface CreateProjectResponse {
-  id: string;
-  message: string;
-}
-
-export interface ApiResponse {
-  message: string;
-}
-
-const handleResponse = async (response: Response) => {
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Request failed' }));
-    console.error('API Error:', error);
-    throw new Error(error.error || `HTTP ${response.status}: ${response.statusText}`);
+export async function createProject(data: any) {
+  try {
+    log("Creating project", data);
+    const response = await axios.post(`${API_BASE_URL}/api/projects`, data);
+    log("Project created successfully", response.data);
+    return response.data;
+  } catch (error: any) {
+    log("Error creating project", error.response?.data || error.message);
+    throw error;
   }
-  return response.json();
-};
+}
 
-// ✅ Create a new project
-export const createProject = async (
-  projectData: Omit<Project, 'id' | 'raised' | 'supporters' | 'status' | 'createdAt' | 'updatedAt'>
-): Promise<CreateProjectResponse> => {
-  console.log('[API] Creating project:', projectData);
-  const response = await fetch(`${API_BASE_URL}/projects`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(projectData),
-  });
-  return handleResponse(response);
-};
+export async function getAllProjects(category = "", search = "") {
+  try {
+    log("Fetching all projects", { category, search });
+    const params = new URLSearchParams();
+    if (category && category !== "all") params.append("category", category);
+    if (search) params.append("search", search);
 
-// ✅ Mint RoughDraftNFT via /mint-roughdraft
-export const mintRoughDraftNFT = async ({
-  projectId,
-  metadata,
-}: {
-  projectId: string;
-  metadata: {
-    name: string;
-    description: string;
-    image: File;
-    creatorAddress: string;
-  };
-}) => {
-  console.log('[API] Minting RoughDraftNFT for project:', projectId);
-  console.log('[API] Metadata:', metadata);
+    const response = await axios.get(`${API_BASE_URL}/api/projects?${params.toString()}`);
+    log("Projects fetched", response.data);
+    return response.data;
+  } catch (error: any) {
+    log("Error fetching projects", error.response?.data || error.message);
+    throw error;
+  }
+}
 
-  const formData = new FormData();
-  formData.append('title', metadata.name);
-  formData.append('description', metadata.description);
-  formData.append('creatorAddress', metadata.creatorAddress);
-  formData.append('image', metadata.image);
+export async function getProjectById(id: string) {
+  try {
+    log(`Fetching project by ID: ${id}`);
+    const response = await axios.get(`${API_BASE_URL}/api/projects/${id}`);
+    log("Project fetched", response.data);
+    return response.data;
+  } catch (error: any) {
+    log("Error fetching project by ID", error.response?.data || error.message);
+    throw error;
+  }
+}
 
-  const response = await fetch(`${API_BASE_URL}/mint-roughdraft`, {
-    method: 'POST',
-    body: formData,
-  });
+export async function getUserProjects(address: string) {
+  try {
+    log(`Fetching user projects for address: ${address}`);
+    const response = await axios.get(`${API_BASE_URL}/api/users/${address}/projects`);
+    log("User projects fetched", response.data);
+    return response.data;
+  } catch (error: any) {
+    log("Error fetching user projects", error.response?.data || error.message);
+    throw error;
+  }
+}
 
-  return handleResponse(response);
-};
+export async function getUserBackedProjects(address: string) {
+  try {
+    log(`Fetching backed projects for user: ${address}`);
+    const response = await axios.get(`${API_BASE_URL}/api/users/${address}/backed-projects`);
+    log("User backed projects fetched", response.data);
+    return response.data;
+  } catch (error: any) {
+    log("Error fetching backed projects", error.response?.data || error.message);
+    throw error;
+  }
+}
 
-// ✅ Get list of projects
-export const getProjects = async (category?: string, search?: string): Promise<Project[]> => {
-  const params = new URLSearchParams();
-  if (category && category !== 'all') params.append('category', category);
-  if (search) params.append('search', search);
+export async function getHeroFeaturedProjects() {
+  try {
+    log("Fetching hero featured projects");
+    const response = await axios.get(`${API_BASE_URL}/api/hero-featured`);
+    log("Hero featured projects fetched", response.data);
+    return response.data;
+  } catch (error: any) {
+    log("Error fetching featured projects", error.response?.data || error.message);
+    throw error;
+  }
+}
 
-  console.log('[API] Fetching projects with params:', params.toString());
-  const response = await fetch(`${API_BASE_URL}/projects?${params.toString()}`);
-  return handleResponse(response);
-};
+export async function backProject(projectId: string, data: { amount: number; backerAddress: string }) {
+  try {
+    log(`Backing project: ${projectId}`, data);
+    const response = await axios.post(`${API_BASE_URL}/api/projects/${projectId}/back`, data);
+    log("Project backed", response.data);
+    return response.data;
+  } catch (error: any) {
+    log("Error backing project", error.response?.data || error.message);
+    throw error;
+  }
+}
 
-// ✅ Get a single project
-export const getProject = async (id: string): Promise<Project> => {
-  console.log('[API] Fetching project:', id);
-  const response = await fetch(`${API_BASE_URL}/projects/${id}`);
-  return handleResponse(response);
-};
+// 🪙 NFT Minting
 
-// ✅ Get featured projects
-export const getFeaturedProjects = async (): Promise<Project[]> => {
-  console.log('[API] Fetching featured projects');
-  const response = await fetch(`${API_BASE_URL}/hero-featured`);
-  return handleResponse(response);
-};
+export async function mintRoughDraftNFT(data: any) {
+  try {
+    log("Minting RoughDraft NFT", data);
+    const response = await axios.post(`${API_BASE_URL}/api/mint-create`, data);
+    log("NFT minted", response.data);
+    return response.data;
+  } catch (error: any) {
+    log("Error minting NFT", error.response?.data || error.message);
+    throw error;
+  }
+}
 
-// ✅ Back a project
-export const backProject = async (
-  projectId: string,
-  amount: number,
-  backerAddress: string
-): Promise<ApiResponse> => {
-  console.log('[API] Backing project:', { projectId, amount, backerAddress });
-  const response = await fetch(`${API_BASE_URL}/projects/${projectId}/back`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ amount, backerAddress }),
-  });
-  return handleResponse(response);
-};
+// 📁 File Upload
 
-// ✅ Upload image file
-export const uploadFile = async (file: File): Promise<UploadResult> => {
-  console.log('[API] Uploading file:', file.name);
-  const formData = new FormData();
-  formData.append('file', file);
+export async function uploadFile(file: File) {
+  try {
+    log("Uploading file to IPFS", file);
+    const formData = new FormData();
+    formData.append("file", file);
 
-  const response = await fetch(`${API_BASE_URL}/upload`, {
-    method: 'POST',
-    body: formData,
-  });
+    const response = await axios.post(`${API_BASE_URL}/api/upload`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
 
-  return handleResponse(response);
-};
-
-// ✅ Get projects created by a user
-export const getUserProjects = async (address: string): Promise<Project[]> => {
-  console.log('[API] Fetching user projects:', address);
-  const response = await fetch(`${API_BASE_URL}/users/${address}/projects`);
-  return handleResponse(response);
-};
-
-// ✅ Get projects backed by a user
-export const getUserBackedProjects = async (address: string): Promise<Project[]> => {
-  console.log('[API] Fetching user backed projects:', address);
-  const response = await fetch(`${API_BASE_URL}/users/${address}/backed-projects`);
-  return handleResponse(response);
-};
+    log("File uploaded", response.data);
+    return response.data;
+  } catch (error: any) {
+    log("Error uploading file", error.response?.data || error.message);
+    throw error;
+  }
+}

@@ -51,32 +51,24 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
   };
 
   const nextStep = () => {
-    const next = step === "Basics" ? "Funding" : step === "Funding" ? "Review" : null;
-    if (next) {
-      log(`[nextStep] Transitioning from ${step} to ${next}`);
-      setStep(next);
-    }
+    if (step === "Basics") return setStep("Funding");
+    if (step === "Funding") return setStep("Review");
   };
 
   const prevStep = () => {
-    const prev = step === "Review" ? "Funding" : step === "Funding" ? "Basics" : null;
-    if (prev) {
-      log(`[prevStep] Returning from ${step} to ${prev}`);
-      setStep(prev);
-    }
+    if (step === "Review") return setStep("Funding");
+    if (step === "Funding") return setStep("Basics");
   };
 
   const handleLaunch = async () => {
     if (!address) {
       setError("Please connect your wallet");
-      log("[handleLaunch] Error: Wallet not connected");
-      return;
+      return log("[handleLaunch] Error: Wallet not connected");
     }
 
     if (!formData.image) {
       setError("Please select a cover image");
-      log("[handleLaunch] Error: No image selected");
-      return;
+      return log("[handleLaunch] Error: No image selected");
     }
 
     try {
@@ -95,9 +87,14 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
         image: uploadResult.url,
       });
 
-      log("[handleLaunch] Project created, now minting NFT...");
+      log("[handleLaunch] Project created, minting NFT...");
+
       await mintRoughDraftNFT({
         projectId: project.id,
+        title: formData.title,
+        description: formData.description,
+        creatorAddress: address,
+        image: formData.image,
         metadata: {
           name: formData.title,
           description: formData.description,
@@ -121,7 +118,11 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
   return (
     <>
       <div className="fixed inset-0 z-50 bg-black/80 animate-in fade-in-0" />
-      <div role="dialog" className="fixed z-50 bg-background shadow-lg transition ease-in-out duration-500 inset-y-0 right-0 h-full border-l slide-in-from-right w-full sm:max-w-xl md:max-w-2xl overflow-auto">
+
+      <div
+        role="dialog"
+        className="fixed z-50 bg-background shadow-lg transition ease-in-out duration-500 inset-y-0 right-0 h-full border-l slide-in-from-right w-full sm:max-w-xl md:max-w-2xl overflow-auto"
+      >
         <div className="flex flex-col h-full">
           <div className="p-6 border-b">
             <h2 className="text-lg font-semibold">Create New Project</h2>
@@ -138,13 +139,19 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
             )}
 
             {step === "Basics" && (
-              <ProjectBasicsStep formData={formData} updateField={updateField} isLoading={isLoading} />
+              <ProjectBasicsStep
+                formData={formData}
+                updateField={updateField}
+                isLoading={isLoading}
+              />
             )}
 
             {step === "Funding" && (
               <ProjectFundingStep
                 formData={formData}
-                setFormData={(data) => setFormData((prev) => ({ ...prev, ...data }))}
+                setFormData={(data) =>
+                  setFormData((prev) => ({ ...prev, ...data }))
+                }
                 onBack={prevStep}
                 onNext={nextStep}
                 isLoading={isLoading}
@@ -153,11 +160,11 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
 
             {step === "Review" && (
               <ProjectReviewStep
-                title={formData.title || ""}
-                description={formData.description || ""}
-                category={formData.category || ""}
-                goal={formData.goal || "0"}
-                imagePreview={formData.imagePreview || null}
+                title={formData.title}
+                description={formData.description}
+                category={formData.category}
+                goal={formData.goal}
+                imagePreview={formData.imagePreview}
                 onBack={prevStep}
                 isLoading={isLoading}
               />
@@ -166,7 +173,8 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
             {isUploading && (
               <div className="mt-4 space-y-1">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Upload className="h-4 w-4 animate-pulse" /> Uploading image to IPFS...
+                  <Upload className="h-4 w-4 animate-pulse" />
+                  Uploading image to IPFS...
                 </div>
                 <div className="w-full h-2 bg-muted rounded-full">
                   <div className="h-2 bg-primary rounded-full animate-pulse w-1/2" />
@@ -177,13 +185,21 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
 
           <div className="p-6 border-t flex justify-between">
             {step !== "Basics" ? (
-              <button onClick={prevStep} disabled={isLoading} className="btn-outline">Back</button>
+              <button onClick={prevStep} disabled={isLoading} className="btn-outline">
+                Back
+              </button>
             ) : (
-              <button onClick={onClose} disabled={isLoading} className="btn-outline">Cancel</button>
+              <button onClick={onClose} disabled={isLoading} className="btn-outline">
+                Cancel
+              </button>
             )}
 
             {step === "Review" ? (
-              <button onClick={handleLaunch} disabled={isLoading || !formData.image} className="btn-primary">
+              <button
+                onClick={handleLaunch}
+                disabled={isLoading || !formData.image}
+                className="btn-primary"
+              >
                 {isCreating ? "Creating..." : isUploading ? "Uploading..." : "Launch Project"}
               </button>
             ) : (
@@ -194,7 +210,11 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
           </div>
         </div>
 
-        <button onClick={onClose} disabled={isLoading} className="absolute right-4 top-4 opacity-70 hover:opacity-100">
+        <button
+          onClick={onClose}
+          disabled={isLoading}
+          className="absolute right-4 top-4 opacity-70 hover:opacity-100"
+        >
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </button>

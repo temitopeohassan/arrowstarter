@@ -1,8 +1,7 @@
-// src/routes/mintRoughDraftNFT.js
 const { ethers } = require("ethers");
-const { PinataSDK } = require("pinata-web3");
+const pinataSDK = require("@pinata/sdk");
 const multer = require("multer");
-const FormData = require("form-data");
+const { Readable } = require("stream");
 require("dotenv").config();
 
 // Load ABI and contract address
@@ -10,10 +9,7 @@ const { abi: ROUGHDRAFT_NFT_ABI } = require("../abis/RoughDraftNFT.json");
 const ROUGHDRAFT_NFT_ADDRESS = process.env.ROUGHDRAFT_NFT_ADDRESS;
 
 // Setup Pinata client
-const pinata = new PinataSDK({
-  pinataApiKey: process.env.PINATA_API_KEY,
-  pinataSecretApiKey: process.env.PINATA_SECRET_API_KEY,
-});
+const pinata = pinataSDK(process.env.PINATA_API_KEY, process.env.PINATA_SECRET_API_KEY);
 
 // Setup Ethereum provider and signer
 const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
@@ -38,14 +34,14 @@ const mintRoughDraftNFTHandler = [
       }
 
       const imageBuffer = req.file.buffer;
+      const imageStream = Readable.from(imageBuffer);
 
-      // Upload image to IPFS via Pinata
-      const imageForm = new FormData();
-      imageForm.append("file", imageBuffer, { filename: "image.png" });
-
+      // Upload image to IPFS
       let imageResponse;
       try {
-        imageResponse = await pinata.pinFileToIPFS(imageForm);
+        imageResponse = await pinata.pinFileToIPFS(imageStream, {
+          pinataMetadata: { name: "project-image" },
+        });
       } catch (err) {
         console.error("Pinata image upload failed:", err);
         return res.status(500).json({ error: "Failed to upload image to IPFS" });
@@ -54,35 +50,45 @@ const mintRoughDraftNFTHandler = [
       const imageURI = `ipfs://${imageResponse.IpfsHash}`;
 
       // Upload metadata to IPFS
-      const metadata = { name: title, description, image: imageURI };
+      const metadata = {
+        name: title,
+        description,
+        image: imageURI,
+      };
 
       let metadataResponse;
       try {
-        metadataResponse = await pinata.pinJSONToIPFS(metadata);
+        metadataResponse = await pinata.pinJSONToIPFS(metadata, {
+          pinataMetadata: { name: "project-metadata" },
+        });
       } catch (err) {
         console.error("Pinata metadata upload failed:", err);
         return res.status(500).json({ error: "Failed to upload metadata to IPFS" });
       }
 
-      const metadataHash = metadataResponse.IpfsHash;
-      const baseURI = `ipfs://${metadataHash}/`;
+      const tokenBaseURI = `ipfs://${metadataResponse.IpfsHash}`;
 
-      // Set base URI (can be optional if already set)
-      const setUriTx = await roughDraftNFT.setBaseURI(baseURI);
-      await setUriTx.wait();
+      // Set base URI if not already set
+      // Optional: You can move this to a one-time script or admin route
+      try {
+        const tx = await roughDraftNFT.setBaseURI(tokenBaseURI + "/");
+        await tx.wait();
+      } catch (err) {
+        console.warn("Base URI set might have failed or already set:", err.reason || err.message);
+      }
 
-      // Mint NFT
+      // Mint the NFT
       const tx = await roughDraftNFT.mint(creatorAddress);
       const receipt = await tx.wait();
 
-      const transferLog = receipt.logs.find(log => log.topics[0] === ethers.id("Transfer(address,address,uint256)"));
-      const tokenId = transferLog ? ethers.decodeLog(["uint256"], transferLog.topics[3])[0].toString() : null;
+      const mintEvent = receipt.logs.find(log => log.topics[0] === roughDraftNFT.interface.getEventTopic("DraftMinted"));
+      const tokenId = mintEvent
+        ? ethers.getBigInt(mintEvent.topics[2]).toString()
+        : "unknown";
 
-      res.status(201).json({
-        message: "NFT minted successfully",
-        tokenId,
-        tokenURI: `${baseURI}${tokenId}`
-      });
+      const tokenURI = `${tokenBaseURI}/${tokenId}`;
+
+      res.status(201).json({ message: "NFT minted", tokenId, tokenURI });
     } catch (error) {
       console.error("Mint NFT Error:", error);
       res.status(500).json({ error: error.message });

@@ -20,6 +20,7 @@ export type Project = {
   image: string;
   goal: number;
   raised: number; // ✅ Add this
+  status: "draft" | "live" | "completed" | "cancelled"; // ✅ Add this
   creatorAddress: string;
   fundingGoal: number;
   totalBacked: number;

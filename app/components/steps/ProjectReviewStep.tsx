@@ -25,11 +25,11 @@ export function ProjectReviewStep({
       <div className="border p-4 rounded-md">
         <h3 className="text-lg font-semibold mb-2">Project Summary</h3>
         <div className="grid gap-3 text-sm">
-          <div><strong>Title:</strong> {title}</div>
-          <div><strong>Description:</strong> {description}</div>
-          <div><strong>Category:</strong> {category}</div>
-          <div><strong>Goal:</strong> {goal} ETH</div>
-        </div>
+  <div><strong>Title:</strong> {title || "N/A"}</div>
+  <div><strong>Description:</strong> {description || "N/A"}</div>
+  <div><strong>Category:</strong> {category || "N/A"}</div>
+  <div><strong>Goal:</strong> {goal || "0"} ETH</div>
+</div>
       </div>
 
       {imagePreview && (

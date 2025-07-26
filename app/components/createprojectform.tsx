@@ -167,11 +167,15 @@ export default function CreateProjectForm({
 
             {step === "Review" && (
               <ProjectReviewStep
-                {...formData}
-                imagePreview={formData.imagePreview || null}
-                onBack={prevStep}
-                isLoading={isLoading}
-              />
+  title={formData.title || ""}
+  description={formData.description || ""}
+  category={formData.category || ""}
+  goal={formData.goal || "0"}
+  imagePreview={formData.imagePreview || null}
+  onBack={prevStep}
+  isLoading={isLoading}
+/>
+
             )}
 
             {isUploading && (

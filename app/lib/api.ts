@@ -129,6 +129,7 @@ export async function mintRoughDraftNFT(data: {
   description: string;
   creatorAddress: string;
   image: File;
+  metadata?: Record<string, any>; // optional and flexible
 }) {
   const formData = new FormData();
   formData.append("projectId", data.projectId);

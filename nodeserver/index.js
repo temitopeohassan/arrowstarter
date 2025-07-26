@@ -231,10 +231,8 @@ app.get("/api/users/:address/backed-projects", async (req, res) => {
 });
 
 // 🪙 NFT Mint Route
-app.post("/api/mint-create", (req, res) => {
-  console.log("📨 POST /api/mint-create", req.body);
-  mintRoughDraftNFTHandler(req, res);
-});
+app.post("/api/mint-create", ...mintRoughDraftNFTHandler);
+
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {

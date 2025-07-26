@@ -19,6 +19,7 @@ export type Project = {
   ownerAddress: string;
   image: string;
   goal: number;
+  raised: number; // ✅ Add this
   creatorAddress: string;
   fundingGoal: number;
   totalBacked: number;

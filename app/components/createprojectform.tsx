@@ -92,7 +92,7 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
         category: formData.category,
         goal: parseFloat(formData.goal),
         creatorAddress: address,
-        image: uploadResult.fileUrl,
+        image: uploadResult.url,
       });
 
       log("[handleLaunch] Project created, now minting NFT...");
@@ -101,7 +101,7 @@ export default function CreateProjectForm({ onClose, onSuccess }: CreateProjectF
         metadata: {
           name: formData.title,
           description: formData.description,
-          image: uploadResult.fileUrl,
+          image: uploadResult.url,
         },
       });
 

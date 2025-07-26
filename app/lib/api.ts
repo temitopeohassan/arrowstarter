@@ -123,17 +123,29 @@ export async function backProject(
 
 // 🪙 NFT Minting
 
-export async function mintRoughDraftNFT(data: any): Promise<any> {
-  try {
-    log("Minting RoughDraft NFT", data);
-    const response = await axios.post(`${API_BASE_URL}/api/mint-create`, data);
-    log("NFT minted", response.data);
-    return response.data;
-  } catch (error: any) {
-    log("Error minting NFT", error.response?.data || error.message);
-    throw error;
-  }
+export async function mintRoughDraftNFT(data: {
+  projectId: string;
+  title: string;
+  description: string;
+  creatorAddress: string;
+  image: File;
+}) {
+  const formData = new FormData();
+  formData.append("projectId", data.projectId);
+  formData.append("title", data.title);
+  formData.append("description", data.description);
+  formData.append("creatorAddress", data.creatorAddress);
+  formData.append("image", data.image); // 👈 this is the key!
+
+  const response = await axios.post(`${API_BASE_URL}/api/mint-create`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  return response.data;
 }
+
 
 // 📁 File Upload
 

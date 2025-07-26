@@ -64,26 +64,33 @@ export const createProject = async (
 };
 
 // Mint RoughDraftNFT after project creation
-export const mintRoughDraftNFT = async ({
+export async function mintRoughDraftNFT({
   projectId,
-  title,
-  description,
-  image,
-  creatorAddress,
+  metadata,
 }: {
   projectId: string;
-  title: string;
-  description: string;
-  image: string;
-  creatorAddress: string;
-}): Promise<{ tokenId: string; metadataUri: string }> => {
-  const response = await fetch(`${API_BASE_URL}/mint-create`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ projectId, title, description, image, creatorAddress }),
+  metadata: {
+    name: string;
+    description: string;
+    image: string;
+  };
+}) {
+  const response = await fetch("/api/mint-create", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ projectId, metadata }),
   });
-  return handleResponse(response);
-};
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(`Failed to mint NFT: ${message}`);
+  }
+
+  return response.json();
+}
+
 
 // Get a list of projects (with optional filters)
 export const getProjects = async (category?: string, search?: string): Promise<Project[]> => {

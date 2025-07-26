@@ -2,20 +2,20 @@
 const express = require("express");
 const router = express.Router();
 const { ethers } = require("ethers");
-const { PinataSDK } = require("pinata-web3");
+const { create } = require("ipfs-http-client");
 const multer = require("multer");
 const upload = multer({ storage: multer.memoryStorage() });
 require("dotenv").config();
-const FormData = require("form-data");
 
 // Load environment variables
-const ROUGHDRAFT_NFT_ABI = require("../abis/RoughDraftNFT.json");
+const { abi: ROUGHDRAFT_NFT_ABI } = require("../abis/RoughDraftNFT.json");
 const ROUGHDRAFT_NFT_ADDRESS = process.env.ROUGHDRAFT_NFT_ADDRESS;
 
-// Setup Pinata client
-const pinata = new PinataSDK({
-  pinataApiKey: process.env.PINATA_API_KEY,
-  pinataSecretApiKey: process.env.PINATA_SECRET_API_KEY,
+// Setup IPFS client
+const ipfs = create({
+  host: "ipfs.infura.io",
+  port: 5001,
+  protocol: "https",
 });
 
 // Setup provider and signer
@@ -28,33 +28,29 @@ const roughDraftNFT = new ethers.Contract(
 );
 
 /**
- * Upload metadata to Pinata and mint a RoughDraftNFT.
+ * Upload metadata to IPFS and mint a RoughDraftNFT.
+ * Required fields: title, description, image (file)
  */
 router.post("/mint-roughdraft", upload.single("image"), async (req, res) => {
   try {
     const { title, description, creatorAddress } = req.body;
     const imageBuffer = req.file.buffer;
 
-    // 1. Upload image to IPFS via Pinata
-    const imageForm = new FormData();
-    imageForm.append("file", imageBuffer, {
-      filename: "image.png", // optional: customize filename
-    });
+    // 1. Upload image to IPFS
+    const imageResult = await ipfs.add(imageBuffer);
+    const imageURI = `https://ipfs.io/ipfs/${imageResult.path}`;
 
-    const imageResponse = await pinata.pinFileToIPFS(imageForm);
-    const imageURI = `https://ipfs.io/ipfs/${imageResponse.IpfsHash}`;
-
-    // 2. Create and upload metadata to IPFS via Pinata
+    // 2. Create metadata
     const metadata = {
       name: title,
       description,
       image: imageURI,
     };
 
-    const metadataResponse = await pinata.pinJSONToIPFS(metadata);
-    const tokenURI = `https://ipfs.io/ipfs/${metadataResponse.IpfsHash}`;
+    const metadataResult = await ipfs.add(JSON.stringify(metadata));
+    const tokenURI = `https://ipfs.io/ipfs/${metadataResult.path}`;
 
-    // 3. Mint NFT
+    // 3. Mint NFT to creator
     const tx = await roughDraftNFT.mintTo(creatorAddress, tokenURI);
     const receipt = await tx.wait();
 

@@ -2,7 +2,17 @@ const { ethers } = require("ethers");
 const PinataSDK = require("@pinata/sdk");
 const multer = require("multer");
 const { Readable } = require("stream");
+const { getFirestore } = require("firebase-admin/firestore");
+const { initializeApp, cert, getApps } = require("firebase-admin/app");
 require("dotenv").config();
+
+// Firebase initialization
+if (!getApps().length) {
+  initializeApp({
+    credential: cert(require("../../firebase-service-account.json")), // adjust path if needed
+  });
+}
+const db = getFirestore();
 
 // Load ABI and contract address
 const { abi: ROUGHDRAFT_NFT_ABI } = require("../abis/RoughDraftNFT.json");
@@ -68,7 +78,7 @@ const mintRoughDraftNFTHandler = [
 
       const tokenBaseURI = `ipfs://${metadataResponse.IpfsHash}`;
 
-      // Set base URI (optional - make sure this doesn't overwrite)
+      // Set base URI (optional)
       try {
         const tx = await roughDraftNFT.setBaseURI(tokenBaseURI + "/");
         await tx.wait();
@@ -90,7 +100,18 @@ const mintRoughDraftNFTHandler = [
 
       const tokenURI = `${tokenBaseURI}/${tokenId}`;
 
-      res.status(201).json({ message: "NFT minted", tokenId, tokenURI });
+      // Save project to Firestore
+      await db.collection("projects").doc(tokenId).set({
+        title,
+        description,
+        creatorAddress,
+        tokenId,
+        tokenURI,
+        imageURI, // 🔥 ensure this gets saved
+        createdAt: new Date().toISOString(),
+      });
+
+      res.status(201).json({ message: "NFT minted and saved", tokenId, tokenURI });
     } catch (error) {
       console.error("Mint NFT Error:", error);
       res.status(500).json({ error: error.message });

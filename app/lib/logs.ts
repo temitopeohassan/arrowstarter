@@ -8,7 +8,7 @@ export async function log(...args: any[]) {
   }
 
   try {
-    await fetch("/api/logs", {
+    await fetch("/app/api/logs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message }),

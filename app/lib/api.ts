@@ -1,4 +1,3 @@
-// lib/api.ts
 import axios from "axios";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
@@ -7,9 +6,26 @@ const log = (label: string, payload?: any) => {
   console.log(`[API] ${label}`, payload ?? "");
 };
 
+// 🔠 Types
+
+export type Project = {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  category: string;
+  createdAt: string;
+  updatedAt?: string;
+  ownerAddress: string;
+  fundingGoal: number;
+  totalBacked: number;
+  backersCount: number;
+  // Add more fields as needed
+};
+
 // 🔨 Project APIs
 
-export async function createProject(data: any) {
+export async function createProject(data: Partial<Project>): Promise<Project> {
   try {
     log("Creating project", data);
     const response = await axios.post(`${API_BASE_URL}/api/projects`, data);
@@ -21,7 +37,7 @@ export async function createProject(data: any) {
   }
 }
 
-export async function getAllProjects(category = "", search = "") {
+export async function getAllProjects(category = "", search = ""): Promise<Project[]> {
   try {
     log("Fetching all projects", { category, search });
     const params = new URLSearchParams();
@@ -37,7 +53,7 @@ export async function getAllProjects(category = "", search = "") {
   }
 }
 
-export async function getProjectById(id: string) {
+export async function getProjectById(id: string): Promise<Project> {
   try {
     log(`Fetching project by ID: ${id}`);
     const response = await axios.get(`${API_BASE_URL}/api/projects/${id}`);
@@ -49,7 +65,7 @@ export async function getProjectById(id: string) {
   }
 }
 
-export async function getUserProjects(address: string) {
+export async function getUserProjects(address: string): Promise<Project[]> {
   try {
     log(`Fetching user projects for address: ${address}`);
     const response = await axios.get(`${API_BASE_URL}/api/users/${address}/projects`);
@@ -61,7 +77,7 @@ export async function getUserProjects(address: string) {
   }
 }
 
-export async function getUserBackedProjects(address: string) {
+export async function getUserBackedProjects(address: string): Promise<Project[]> {
   try {
     log(`Fetching backed projects for user: ${address}`);
     const response = await axios.get(`${API_BASE_URL}/api/users/${address}/backed-projects`);
@@ -73,7 +89,7 @@ export async function getUserBackedProjects(address: string) {
   }
 }
 
-export async function getHeroFeaturedProjects() {
+export async function getHeroFeaturedProjects(): Promise<Project[]> {
   try {
     log("Fetching hero featured projects");
     const response = await axios.get(`${API_BASE_URL}/api/hero-featured`);
@@ -85,7 +101,10 @@ export async function getHeroFeaturedProjects() {
   }
 }
 
-export async function backProject(projectId: string, data: { amount: number; backerAddress: string }) {
+export async function backProject(
+  projectId: string,
+  data: { amount: number; backerAddress: string }
+): Promise<{ success: boolean; message: string }> {
   try {
     log(`Backing project: ${projectId}`, data);
     const response = await axios.post(`${API_BASE_URL}/api/projects/${projectId}/back`, data);
@@ -99,7 +118,7 @@ export async function backProject(projectId: string, data: { amount: number; bac
 
 // 🪙 NFT Minting
 
-export async function mintRoughDraftNFT(data: any) {
+export async function mintRoughDraftNFT(data: any): Promise<any> {
   try {
     log("Minting RoughDraft NFT", data);
     const response = await axios.post(`${API_BASE_URL}/api/mint-create`, data);
@@ -113,7 +132,7 @@ export async function mintRoughDraftNFT(data: any) {
 
 // 📁 File Upload
 
-export async function uploadFile(file: File) {
+export async function uploadFile(file: File): Promise<{ url: string }> {
   try {
     log("Uploading file to IPFS", file);
     const formData = new FormData();

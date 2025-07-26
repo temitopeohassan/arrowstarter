@@ -1,28 +1,19 @@
-"use client";
+// wagmi.ts
+'use client';
 
-import { http, cookieStorage, createConfig, createStorage } from 'wagmi';
+import '@rainbow-me/rainbowkit/styles.css';
+import { getDefaultConfig } from '@rainbow-me/rainbowkit';
+import { cookieStorage, createStorage } from 'wagmi';
 import { base, baseSepolia } from 'wagmi/chains';
-import { coinbaseWallet } from 'wagmi/connectors';
 
-export const config = createConfig({
+export const config = getDefaultConfig({
+  appName: 'Arrow Starter',
+  projectId: 'd3057ed5526f6bc31e86aaf9b72c8f4e', // ✅ Required for RainbowKit v1.0+
   chains: [base, baseSepolia],
-  connectors: [
-    coinbaseWallet({
-      appName: "Arrow Starter",
-      preference: {
-        options: 'all', // Options: 'all', 'eoaOnly', 'smartWalletOnly'
-      },
-      version: '4',
-    }),
-  ],
+  ssr: true,
   storage: createStorage({
     storage: cookieStorage,
   }),
-  ssr: true,
-  transports: {
-    [base.id]: http(),
-    [baseSepolia.id]: http(),
-  },
 });
 
 declare module 'wagmi' {

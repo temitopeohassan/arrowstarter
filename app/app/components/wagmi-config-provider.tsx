@@ -1,12 +1,11 @@
-"use client";
+'use client';
 
-import { ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { OnchainKitProvider } from '@coinbase/onchainkit';
-import { base, baseSepolia } from 'wagmi/chains';
+import { ReactNode, useState } from 'react';
 import { WagmiProvider } from 'wagmi';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import { config } from '../wagmi';
-import { useState } from 'react';
+import { base, baseSepolia } from 'wagmi/chains';
 
 export function WagmiConfigProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -14,13 +13,10 @@ export function WagmiConfigProvider({ children }: { children: ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <OnchainKitProvider
-          apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
-          chain={baseSepolia}
-        >
+        <RainbowKitProvider chains={[base, baseSepolia]}>
           {children}
-        </OnchainKitProvider>
+        </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
-} 
+}

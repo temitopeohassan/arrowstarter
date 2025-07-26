@@ -1,8 +1,8 @@
 // src/routes/mintRoughDraftNFT.js
 const { ethers } = require("ethers");
-const PinataSDK = require("@pinata/sdk"); // ✅ Use the correct SDK
+const { PinataSDK } = require("pinata-web3");
 const multer = require("multer");
-const { Readable } = require("stream");
+const FormData = require("form-data");
 require("dotenv").config();
 
 // Load ABI and contract address
@@ -10,7 +10,10 @@ const { abi: ROUGHDRAFT_NFT_ABI } = require("../abis/RoughDraftNFT.json");
 const ROUGHDRAFT_NFT_ADDRESS = process.env.ROUGHDRAFT_NFT_ADDRESS;
 
 // Setup Pinata client
-const pinata = new PinataSDK(process.env.PINATA_API_KEY, process.env.PINATA_SECRET_API_KEY);
+const pinata = new PinataSDK({
+  pinataApiKey: process.env.PINATA_API_KEY,
+  pinataSecretApiKey: process.env.PINATA_SECRET_API_KEY,
+});
 
 // Setup Ethereum provider and signer
 const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
@@ -21,7 +24,7 @@ const roughDraftNFT = new ethers.Contract(
   wallet
 );
 
-// Setup multer for in-memory image upload
+// Setup multer for image file upload (in memory)
 const upload = multer({ storage: multer.memoryStorage() });
 
 const mintRoughDraftNFTHandler = [
@@ -34,30 +37,52 @@ const mintRoughDraftNFTHandler = [
         return res.status(400).json({ error: "Image file is required" });
       }
 
-      // Convert buffer to stream for pinata
-      const readableStream = Readable.from(req.file.buffer);
+      const imageBuffer = req.file.buffer;
 
-      // Upload image to IPFS
-      const imageResult = await pinata.pinFileToIPFS(readableStream, {
-        pinataMetadata: { name: `roughdraft-${Date.now()}` },
-      });
+      // Upload image to IPFS via Pinata
+      const imageForm = new FormData();
+      imageForm.append("file", imageBuffer, { filename: "image.png" });
 
-      const imageURI = `https://ipfs.io/ipfs/${imageResult.IpfsHash}`;
+      let imageResponse;
+      try {
+        imageResponse = await pinata.pinFileToIPFS(imageForm);
+      } catch (err) {
+        console.error("Pinata image upload failed:", err);
+        return res.status(500).json({ error: "Failed to upload image to IPFS" });
+      }
+
+      const imageURI = `ipfs://${imageResponse.IpfsHash}`;
 
       // Upload metadata to IPFS
       const metadata = { name: title, description, image: imageURI };
-      const metadataResult = await pinata.pinJSONToIPFS(metadata);
 
-      const tokenURI = `https://ipfs.io/ipfs/${metadataResult.IpfsHash}`;
+      let metadataResponse;
+      try {
+        metadataResponse = await pinata.pinJSONToIPFS(metadata);
+      } catch (err) {
+        console.error("Pinata metadata upload failed:", err);
+        return res.status(500).json({ error: "Failed to upload metadata to IPFS" });
+      }
+
+      const metadataHash = metadataResponse.IpfsHash;
+      const baseURI = `ipfs://${metadataHash}/`;
+
+      // Set base URI (can be optional if already set)
+      const setUriTx = await roughDraftNFT.setBaseURI(baseURI);
+      await setUriTx.wait();
 
       // Mint NFT
-      const tx = await roughDraftNFT.mintTo(creatorAddress, tokenURI);
+      const tx = await roughDraftNFT.mint(creatorAddress);
       const receipt = await tx.wait();
 
-      const transferLog = receipt.logs.find((log) => log.fragment?.name === "Transfer");
-      const tokenId = transferLog?.args?.tokenId?.toString();
+      const transferLog = receipt.logs.find(log => log.topics[0] === ethers.id("Transfer(address,address,uint256)"));
+      const tokenId = transferLog ? ethers.decodeLog(["uint256"], transferLog.topics[3])[0].toString() : null;
 
-      res.status(201).json({ message: "NFT minted", tokenId, tokenURI });
+      res.status(201).json({
+        message: "NFT minted successfully",
+        tokenId,
+        tokenURI: `${baseURI}${tokenId}`
+      });
     } catch (error) {
       console.error("Mint NFT Error:", error);
       res.status(500).json({ error: error.message });

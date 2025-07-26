@@ -1,16 +1,26 @@
-// app/providers.tsx or app/layout.tsx
 'use client';
 
-import { WagmiProvider } from 'wagmi';
-import { config } from './wagmi';
+import { ReactNode, useState } from 'react';
+import { WagmiProvider, State } from 'wagmi';
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { config } from './wagmi';
 
-export function Providers({ children }: { children: React.ReactNode }) {
+type ProvidersProps = {
+  children: ReactNode;
+  initialState?: State;
+};
+
+export function Providers({ children, initialState }: ProvidersProps) {
+  const [queryClient] = useState(() => new QueryClient());
+
   return (
-    <WagmiProvider config={config}>
-      <RainbowKitProvider>
-        {children}
-      </RainbowKitProvider>
+    <WagmiProvider config={config} initialState={initialState}>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider>
+          {children}
+        </RainbowKitProvider>
+      </QueryClientProvider>
     </WagmiProvider>
   );
 }

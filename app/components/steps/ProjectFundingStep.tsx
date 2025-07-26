@@ -1,6 +1,5 @@
 "use client";
 
-import { ArrowRight, ArrowLeft } from "lucide-react";
 import { ProjectFormData } from "./types"; // adjust if needed
 
 interface ProjectFundingStepProps {
@@ -119,24 +118,7 @@ export function ProjectFundingStep({
 
       {/* Footer */}
       <div className="p-6 border-t flex justify-between">
-        <button
-          type="button"
-          onClick={onBack}
-          disabled={isLoading}
-          className="btn-outline"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </button>
-        <button
-          type="button"
-          onClick={onNext}
-          disabled={isLoading || !formData.goal}
-          className="btn-primary"
-        >
-          Continue
-          <ArrowRight className="h-4 w-4 ml-2" />
-        </button>
+       
       </div>
     </div>
   );

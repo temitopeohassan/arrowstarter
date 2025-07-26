@@ -45,23 +45,7 @@ export function ProjectReviewStep({
         </div>
       )}
 
-      <div className="pt-4 border-t flex justify-between">
-        <button
-          type="button"
-          onClick={onBack}
-          disabled={isLoading}
-          className="btn-outline"
-        >
-          Back
-        </button>
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="btn-primary"
-        >
-          {isLoading ? "Launching..." : "Launch Project"}
-        </button>
-      </div>
+    
     </div>
   );
 }

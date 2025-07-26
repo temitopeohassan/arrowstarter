@@ -4,6 +4,7 @@ const multer = require("multer");
 require("dotenv").config();
 const { initializeApp, cert } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
+const { mintRoughDraftNFTHandler } = require("./src/routes/mintRoughDraftNFT");
 const { PinataSDK } = require("pinata-web3");
 const path = require("path");
 
@@ -249,6 +250,8 @@ app.get("/api/users/:address/backed-projects", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+app.post("/api/mint-create", mintRoughDraftNFTHandler);
 
 // ✅ Start Server
 const PORT = process.env.PORT || 8080;

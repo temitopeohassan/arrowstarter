@@ -1,5 +1,5 @@
 const { ethers } = require("ethers");
-const pinataSDK = require("@pinata/sdk");
+const PinataSDK = require("@pinata/sdk");
 const multer = require("multer");
 const { Readable } = require("stream");
 require("dotenv").config();
@@ -9,7 +9,7 @@ const { abi: ROUGHDRAFT_NFT_ABI } = require("../abis/RoughDraftNFT.json");
 const ROUGHDRAFT_NFT_ADDRESS = process.env.ROUGHDRAFT_NFT_ADDRESS;
 
 // Setup Pinata client
-const pinata = pinataSDK(process.env.PINATA_API_KEY, process.env.PINATA_SECRET_API_KEY);
+const pinata = new PinataSDK(process.env.PINATA_API_KEY, process.env.PINATA_SECRET_API_KEY);
 
 // Setup Ethereum provider and signer
 const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
@@ -68,8 +68,7 @@ const mintRoughDraftNFTHandler = [
 
       const tokenBaseURI = `ipfs://${metadataResponse.IpfsHash}`;
 
-      // Set base URI if not already set
-      // Optional: You can move this to a one-time script or admin route
+      // Set base URI (optional - make sure this doesn't overwrite)
       try {
         const tx = await roughDraftNFT.setBaseURI(tokenBaseURI + "/");
         await tx.wait();
@@ -81,7 +80,10 @@ const mintRoughDraftNFTHandler = [
       const tx = await roughDraftNFT.mint(creatorAddress);
       const receipt = await tx.wait();
 
-      const mintEvent = receipt.logs.find(log => log.topics[0] === roughDraftNFT.interface.getEventTopic("DraftMinted"));
+      const mintEvent = receipt.logs.find(
+        (log) =>
+          log.topics[0] === roughDraftNFT.interface.getEventTopic("DraftMinted")
+      );
       const tokenId = mintEvent
         ? ethers.getBigInt(mintEvent.topics[2]).toString()
         : "unknown";

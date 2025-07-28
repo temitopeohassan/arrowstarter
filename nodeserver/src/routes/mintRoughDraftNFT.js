@@ -44,7 +44,11 @@ const mintRoughDraftNFTHandler = [
   upload.single("image"),
   async (req, res) => {
     try {
-      const { title, description, creatorAddress } = req.body;
+      const { projectId, title, description, creatorAddress } = req.body;
+
+      if (!projectId) {
+        return res.status(400).json({ error: "Project ID is required" });
+      }
 
       if (!req.file) {
         return res.status(400).json({ error: "Image file is required" });
@@ -106,15 +110,20 @@ const mintRoughDraftNFTHandler = [
 
       const tokenURI = `${tokenBaseURI}/${tokenId}`;
 
-      // Save project to Firestore
-      await db.collection("projects").doc(tokenId).set({
-        title,
-        description,
-        creatorAddress,
+      // Verify project exists and update with NFT data
+      const projectRef = db.collection("projects").doc(projectId);
+      const projectDoc = await projectRef.get();
+      
+      if (!projectDoc.exists) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      await projectRef.update({
         tokenId,
         tokenURI,
         imageURI,
-        createdAt: new Date().toISOString(),
+        nftMinted: true,
+        nftMintedAt: new Date().toISOString(),
       });
 
       res.status(201).json({ message: "NFT minted and saved", tokenId, tokenURI });

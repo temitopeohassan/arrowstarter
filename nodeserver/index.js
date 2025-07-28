@@ -186,7 +186,7 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     res.json({
       message: "File uploaded to IPFS",
       ipfsHash,
-      fileUrl: `https://gateway.pinata.cloud/ipfs/${ipfsHash}`,
+      url: `https://gateway.pinata.cloud/ipfs/${ipfsHash}`,
       filename: req.file.originalname,
       size: req.file.size,
       pinataUrl: `https://app.pinata.cloud/pinmanager?hash=${ipfsHash}`,

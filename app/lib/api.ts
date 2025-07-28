@@ -80,7 +80,11 @@ export async function getUserProjects(address: string): Promise<Project[]> {
   }
 }
 
-export async function getUserBackedProjects(address: string): Promise<Project[]> {
+export type BackedProject = Project & {
+  backedAmount: number;
+};
+
+export async function getUserBackedProjects(address: string): Promise<BackedProject[]> {
   try {
     log(`Fetching backed projects for user: ${address}`);
     const response = await axios.get(`${API_BASE_URL}/api/users/${address}/backed-projects`);

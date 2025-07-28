@@ -185,7 +185,7 @@ export function Projects() {
       {selectedProject && (
         <BackProjectModal
           isOpen={!!selectedProject}
-          onClose={() => setSelectedProject(null)}
+          onCloseAction={() => setSelectedProject(null)}
           project={{
             id: selectedProject.id,
             title: selectedProject.title,

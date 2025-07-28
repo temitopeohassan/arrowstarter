@@ -11,37 +11,59 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Wallet } from "lucide-react";
-import { API_BASE_URL } from "../app/config";
+import { Loader2, Wallet, AlertCircle, CheckCircle } from "lucide-react";
+import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { useBackProject } from "@/hooks/use-crowdfunding-contract";
+import { useNFTMinting } from "@/hooks/use-nft-minting";
+import { backProject } from "@/lib/api";
 
 interface BackProjectModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onCloseAction: () => void;
   project: {
     id: string;
     title: string;
     goal: number;
     raised: number;
   };
-  onSuccess?: () => void; // Callback for successful backing
+  onSuccess?: () => void;
 }
 
 export function BackProjectModal({
   isOpen,
-  onClose,
+  onCloseAction,
   project,
   onSuccess,
 }: BackProjectModalProps) {
   const [amount, setAmount] = useState("");
-  const [backerAddress, setBackerAddress] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [step, setStep] = useState<"connect" | "back" | "mint" | "success">("connect");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Web3 hooks
+  const { address, isConnected } = useAccount();
+  const { connect, connectors, isPending: isConnecting } = useConnect();
+  const { disconnect } = useDisconnect();
+
+  // Contract hooks
+  const { backProject: backProjectContract, isLoading: isBacking, transactionHash: backingTxHash } = useBackProject();
+  const { mintNFT, isLoading: isMinting, transactionHash: mintingTxHash } = useNFTMinting();
+
+  const handleConnect = async (connector: any) => {
+    try {
+      setError("");
+      await connect({ connector });
+      setStep("back");
+    } catch (err: any) {
+      setError("Failed to connect wallet: " + err.message);
+    }
+  };
+
+  const handleBackProject = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!amount || !backerAddress) {
-      setError("Please fill in all fields");
+    if (!amount) {
+      setError("Please enter an amount");
       return;
     }
 
@@ -51,52 +73,64 @@ export function BackProjectModal({
       return;
     }
 
-    setIsSubmitting(true);
+    if (amountNumber < 0.0001) {
+      setError("Minimum contribution is 0.0001 ETH");
+      return;
+    }
+
     setError("");
+    setSuccessMessage("");
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/projects/${project.id}/back`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            amount: amountNumber,
-            backerAddress,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to back project");
-      }
-
-      // Success - reset form and close modal
-      setAmount("");
-      setBackerAddress("");
-      onClose();
+      // Step 1: Back the project on-chain
+      setSuccessMessage("Backing project on blockchain...");
+      await backProjectContract(parseInt(project.id), amount);
       
-      // Call success callback if provided
+      // Step 2: Update backend
+      setSuccessMessage("Updating project data...");
+      await backProject(project.id, {
+        amount: amountNumber,
+        backerAddress: address!,
+      });
+
+      // Step 3: Mint NFT for the backer
+      setSuccessMessage("Minting your NFT...");
+      setStep("mint");
+      await mintNFT(address!);
+
+      // Success!
+      setStep("success");
+      setSuccessMessage("Project backed successfully! You received an NFT.");
+      
+      // Reset form
+      setAmount("");
+      
+      // Call success callback
       if (onSuccess) {
         onSuccess();
       }
+
+      // Close modal after delay
+      setTimeout(() => {
+        onCloseAction();
+        setStep("connect");
+        setSuccessMessage("");
+      }, 3000);
+
     } catch (err: any) {
       console.error("Error backing project:", err);
       setError(err.message || "Failed to back project. Please try again.");
-    } finally {
-      setIsSubmitting(false);
+      setSuccessMessage("");
     }
   };
 
   const handleClose = () => {
-    if (!isSubmitting) {
+    if (!isBacking && !isMinting) {
       setAmount("");
-      setBackerAddress("");
       setError("");
-      onClose();
+      setSuccessMessage("");
+      setStep("connect");
+      onCloseAction();
     }
   };
 
@@ -135,80 +169,179 @@ export function BackProjectModal({
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Backer Address */}
-            <div className="space-y-2">
-              <Label htmlFor="backerAddress">Your Wallet Address</Label>
-              <Input
-                id="backerAddress"
-                type="text"
-                placeholder="0x..."
-                value={backerAddress}
-                onChange={(e) => setBackerAddress(e.target.value)}
-                disabled={isSubmitting}
-                required
-              />
-            </div>
-
-            {/* Amount */}
-            <div className="space-y-2">
-              <Label htmlFor="amount">Amount to Back (ETH)</Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.0001"
-                min="0.0001"
-                placeholder="0.1"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                disabled={isSubmitting}
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                Minimum contribution: 0.0001 ETH
-              </p>
-            </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="rounded-md bg-destructive/10 p-3">
-                <p className="text-sm text-destructive">{error}</p>
+          {/* Step 1: Connect Wallet */}
+          {step === "connect" && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <Wallet className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">Connect Your Wallet</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Connect your Web3 wallet to back this project and receive an NFT.
+                </p>
               </div>
-            )}
 
-            {/* Actions */}
-            <div className="flex gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={isSubmitting}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex-1"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Backing...
-                  </>
-                ) : (
-                  `Back with ${amount || "0"} ETH`
-                )}
-              </Button>
+              <div className="space-y-2">
+                {connectors.map((connector) => (
+                  <Button
+                    key={connector.uid}
+                    onClick={() => handleConnect(connector)}
+                    disabled={isConnecting}
+                    className="w-full"
+                    variant="outline"
+                  >
+                    {isConnecting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Connecting...
+                      </>
+                    ) : (
+                      <>
+                        <Wallet className="mr-2 h-4 w-4" />
+                        Connect {connector.name}
+                      </>
+                    )}
+                  </Button>
+                ))}
+              </div>
             </div>
-          </form>
+          )}
+
+          {/* Step 2: Back Project */}
+          {step === "back" && isConnected && (
+            <form onSubmit={handleBackProject} className="space-y-4">
+              {/* Connected Wallet Info */}
+              <div className="rounded-lg border p-3 bg-muted/50">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Connected Wallet</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => disconnect()}
+                    className="text-xs"
+                  >
+                    Disconnect
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {address?.slice(0, 6)}...{address?.slice(-4)}
+                </p>
+              </div>
+
+              {/* Amount Input */}
+              <div className="space-y-2">
+                <Label htmlFor="amount">Amount to Back (ETH)</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.0001"
+                  min="0.0001"
+                  placeholder="0.1"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  disabled={isBacking}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Minimum contribution: 0.0001 ETH
+                </p>
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="rounded-md bg-destructive/10 p-3">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-destructive" />
+                    <p className="text-sm text-destructive">{error}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Success Message */}
+              {successMessage && (
+                <div className="rounded-md bg-green-50 p-3 border border-green-200">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <p className="text-sm text-green-800">{successMessage}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClose}
+                  disabled={isBacking}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isBacking || !amount}
+                  className="flex-1"
+                >
+                  {isBacking ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Backing...
+                    </>
+                  ) : (
+                    `Back with ${amount || "0"} ETH`
+                  )}
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {/* Step 3: Minting NFT */}
+          {step === "mint" && (
+            <div className="text-center space-y-4">
+              <div className="animate-pulse">
+                <Wallet className="h-12 w-12 mx-auto mb-4 text-primary" />
+                <h3 className="text-lg font-semibold mb-2">Minting Your NFT</h3>
+                <p className="text-sm text-muted-foreground">
+                  Creating your unique NFT as proof of backing...
+                </p>
+              </div>
+              
+              {mintingTxHash && (
+                <div className="text-xs text-muted-foreground">
+                  Transaction: {mintingTxHash.slice(0, 10)}...{mintingTxHash.slice(-8)}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 4: Success */}
+          {step === "success" && (
+            <div className="text-center space-y-4">
+              <CheckCircle className="h-12 w-12 mx-auto text-green-600" />
+              <h3 className="text-lg font-semibold text-green-800">Success!</h3>
+              <p className="text-sm text-muted-foreground">
+                You've successfully backed "{project.title}" and received an NFT!
+              </p>
+              
+              {backingTxHash && (
+                <div className="text-xs text-muted-foreground">
+                  Backing TX: {backingTxHash.slice(0, 10)}...{backingTxHash.slice(-8)}
+                </div>
+              )}
+              
+              {mintingTxHash && (
+                <div className="text-xs text-muted-foreground">
+                  NFT TX: {mintingTxHash.slice(0, 10)}...{mintingTxHash.slice(-8)}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Disclaimer */}
           <div className="rounded-md bg-muted/50 p-3">
             <p className="text-xs text-muted-foreground">
-              <strong>Note:</strong> This is a demo interface. In a real application, 
-              this would integrate with a Web3 wallet like MetaMask for secure transactions.
+              <strong>Note:</strong> This transaction will be recorded on the blockchain. 
+              Make sure you have enough ETH in your wallet to cover the contribution and gas fees.
             </p>
           </div>
         </div>

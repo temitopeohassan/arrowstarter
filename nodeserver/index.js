@@ -4,7 +4,7 @@ const cors = require("cors");
 const multer = require("multer");
 const dotenv = require("dotenv");
 const { cert, getApps, initializeApp } = require("firebase-admin/app");
-const { getFirestore } = require("firebase-admin/firestore");
+const { getFirestore, Timestamp } = require("firebase-admin/firestore");
 const { PinataSDK } = require("pinata-web3");
 const { mintRoughDraftNFTHandler } = require("./src/routes/mintRoughDraftNFT");
 
@@ -191,17 +191,35 @@ app.post("/api/projects/:id/extension", async (req, res) => {
     }
 
     const projectData = projectDoc.data();
-    const currentDeadline = new Date(projectData.deadline || projectData.createdAt);
+    
+    // Handle the current deadline - use createdAt if deadline doesn't exist
+    let currentDeadline;
+    if (projectData.deadline) {
+      // If deadline is a Firestore Timestamp, convert to Date
+      if (projectData.deadline.toDate) {
+        currentDeadline = projectData.deadline.toDate();
+      } else {
+        currentDeadline = new Date(projectData.deadline);
+      }
+    } else {
+      // Use createdAt as the base deadline
+      if (projectData.createdAt.toDate) {
+        currentDeadline = projectData.createdAt.toDate();
+      } else {
+        currentDeadline = new Date(projectData.createdAt);
+      }
+    }
+    
     const newDeadline = new Date(currentDeadline.getTime() + (extensionDays * 24 * 60 * 60 * 1000));
 
     // Update the project with new deadline and extension info
     await projectRef.update({
-      deadline: newDeadline,
+      deadline: Timestamp.fromDate(newDeadline),
       extensionRequested: true,
       extensionDays: extensionDays,
       extensionReason: reason || "",
-      extensionRequestedAt: new Date(),
-      updatedAt: new Date(),
+      extensionRequestedAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
     });
 
     res.json({ 

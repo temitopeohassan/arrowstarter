@@ -69,6 +69,12 @@ export function BackProjectModal({
 
     // Validate project ID
     const projectId = parseInt(project.id);
+    console.log("Project ID debug:", {
+      originalId: project.id,
+      type: typeof project.id,
+      parsedId: projectId,
+      isNaN: isNaN(projectId)
+    });
     if (isNaN(projectId) || projectId <= 0) {
       setError("Invalid project ID");
       return;

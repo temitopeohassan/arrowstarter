@@ -82,6 +82,15 @@ app.post("/api/projects", async (req, res) => {
       updatedAt: new Date(),
     });
 
+    // Create project mapping for smart contract integration
+    const projectId = docRef.id;
+    await db.collection("projectMappings").doc(projectId).set({
+      firebaseId: projectId,
+      contractId: null, // Will be set when project is created on smart contract
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
     res.status(201).json({ 
       id: docRef.id, 
       message: "Project created successfully" 
@@ -376,6 +385,54 @@ app.get("/api/users/:address/backed-projects", async (req, res) => {
 // 🪙 NFT Mint Route
 app.post("/api/mint-create", ...mintRoughDraftNFTHandler);
 
+// Get project mapping for smart contract integration
+app.get("/api/projects/:id/mapping", async (req, res) => {
+  console.log("📨 GET /api/projects/:id/mapping", req.params);
+  try {
+    const { id } = req.params;
+    const doc = await db.collection("projectMappings").doc(id).get();
+    
+    if (!doc.exists) {
+      return res.status(404).json({ error: "Project mapping not found" });
+    }
+    
+    const mappingData = doc.data();
+    res.json({
+      firebaseId: mappingData.firebaseId,
+      contractId: mappingData.contractId,
+    });
+  } catch (err) {
+    console.error("❌ Get Project Mapping Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update project mapping with smart contract ID
+app.put("/api/projects/:id/mapping", async (req, res) => {
+  console.log("📨 PUT /api/projects/:id/mapping", req.params, req.body);
+  try {
+    const { id } = req.params;
+    const { contractId } = req.body;
+    
+    if (!contractId) {
+      return res.status(400).json({ error: "Contract ID is required" });
+    }
+    
+    await db.collection("projectMappings").doc(id).get().update({
+      contractId: contractId,
+      updatedAt: new Date(),
+    });
+    
+    res.json({ 
+      message: "Project mapping updated successfully",
+      firebaseId: id,
+      contractId: contractId,
+    });
+  } catch (err) {
+    console.error("❌ Update Project Mapping Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {

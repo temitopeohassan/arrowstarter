@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Upload, Users, Calendar, Loader2 } from 'lucide-react';
+import { Upload, Users, Calendar, Loader2, DollarSign, ArrowUp, RotateCcw } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import { Project, getUserProjects, requestProjectExtension } from '@/lib/api';
 import { ManageBackedProjectModal } from './ManageBackedProjectModal';
+import UpfrontPaymentModal from './UpfrontPaymentModal';
+import ProjectDeliveryModal from './ProjectDeliveryModal';
+import RemainingFundsModal from './RemainingFundsModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,8 +29,14 @@ const ProjectCard = ({
   deliveryDate,
   status,
   projectId,
+  raised,
+  goal,
+  creatorAddress,
   onExtensionRequest,
   onUploadDeliverable,
+  onClaimUpfront,
+  onDeliverProject,
+  onClaimRemaining,
 }: {
   image: string;
   title: string;
@@ -37,8 +46,14 @@ const ProjectCard = ({
   deliveryDate: string;
   status: string;
   projectId: string;
+  raised: number;
+  goal: number;
+  creatorAddress: string;
   onExtensionRequest: (projectId: string) => void;
   onUploadDeliverable: (projectId: string) => void;
+  onClaimUpfront: (project: any) => void;
+  onDeliverProject: (project: any) => void;
+  onClaimRemaining: (project: any) => void;
 }) => (
   <div className="rounded-lg border overflow-hidden bg-card text-card-foreground shadow-sm">
     <div className="relative">
@@ -90,6 +105,27 @@ const ProjectCard = ({
           <Users className="mr-2 h-4 w-4" />
           Request Extension
         </button>
+        <button 
+          onClick={() => onClaimUpfront({ id: projectId, title, raised, goal, creatorAddress })}
+          className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium border bg-green-600 text-white hover:bg-green-700 h-10 px-4 py-2 w-full"
+        >
+          <DollarSign className="mr-2 h-4 w-4" />
+          Claim Upfront (30%)
+        </button>
+        <button 
+          onClick={() => onDeliverProject({ id: projectId, title, status, creatorAddress })}
+          className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium border bg-blue-600 text-white hover:bg-blue-700 h-10 px-4 py-2 w-full"
+        >
+          <ArrowUp className="mr-2 h-4 w-4" />
+          Deliver Project
+        </button>
+        <button 
+          onClick={() => onClaimRemaining({ id: projectId, title, raised, status, creatorAddress })}
+          className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium border bg-purple-600 text-white hover:bg-purple-700 h-10 px-4 py-2 w-full"
+        >
+          <RotateCcw className="mr-2 h-4 w-4" />
+          Claim Remaining (70%)
+        </button>
       </div>
     </div>
   </div>
@@ -111,6 +147,14 @@ export const MyProjects = () => {
   // Manage project modal state
   const [manageModalOpen, setManageModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+
+  // New modal states
+  const [upfrontModalOpen, setUpfrontModalOpen] = useState(false);
+  const [selectedUpfrontProject, setSelectedUpfrontProject] = useState<any>(null);
+  const [deliveryModalOpen, setDeliveryModalOpen] = useState(false);
+  const [selectedDeliveryProject, setSelectedDeliveryProject] = useState<any>(null);
+  const [remainingFundsModalOpen, setRemainingFundsModalOpen] = useState(false);
+  const [selectedRemainingProject, setSelectedRemainingProject] = useState<any>(null);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -144,6 +188,21 @@ export const MyProjects = () => {
       setSelectedProject(project);
       setManageModalOpen(true);
     }
+  };
+
+  const handleClaimUpfront = (project: any) => {
+    setSelectedUpfrontProject(project);
+    setUpfrontModalOpen(true);
+  };
+
+  const handleDeliverProject = (project: any) => {
+    setSelectedDeliveryProject(project);
+    setDeliveryModalOpen(true);
+  };
+
+  const handleClaimRemaining = (project: any) => {
+    setSelectedRemainingProject(project);
+    setRemainingFundsModalOpen(true);
   };
 
   const handleSubmitExtension = async () => {
@@ -262,8 +321,14 @@ export const MyProjects = () => {
               deliveryDate={new Date(project.createdAt).toLocaleDateString()}
               status={project.status}
               projectId={project.id}
+              raised={project.raised}
+              goal={project.goal}
+              creatorAddress={project.creatorAddress}
               onExtensionRequest={handleExtensionRequest}
               onUploadDeliverable={handleUploadDeliverable}
+              onClaimUpfront={handleClaimUpfront}
+              onDeliverProject={handleDeliverProject}
+              onClaimRemaining={handleClaimRemaining}
             />
           ))}
         </div>
@@ -359,6 +424,45 @@ export const MyProjects = () => {
             creatorAddress: selectedProject.creatorAddress,
             deliverable: selectedProject.deliverable,
           }}
+          onSuccess={handleManageModalSuccess}
+        />
+      )}
+
+      {/* Upfront Payment Modal */}
+      {selectedUpfrontProject && (
+        <UpfrontPaymentModal
+          isOpen={upfrontModalOpen}
+          onClose={() => {
+            setUpfrontModalOpen(false);
+            setSelectedUpfrontProject(null);
+          }}
+          project={selectedUpfrontProject}
+          onSuccess={handleManageModalSuccess}
+        />
+      )}
+
+      {/* Project Delivery Modal */}
+      {selectedDeliveryProject && (
+        <ProjectDeliveryModal
+          isOpen={deliveryModalOpen}
+          onClose={() => {
+            setDeliveryModalOpen(false);
+            setSelectedDeliveryProject(null);
+          }}
+          project={selectedDeliveryProject}
+          onSuccess={handleManageModalSuccess}
+        />
+      )}
+
+      {/* Remaining Funds Modal */}
+      {selectedRemainingProject && (
+        <RemainingFundsModal
+          isOpen={remainingFundsModalOpen}
+          onClose={() => {
+            setRemainingFundsModalOpen(false);
+            setSelectedRemainingProject(null);
+          }}
+          project={selectedRemainingProject}
           onSuccess={handleManageModalSuccess}
         />
       )}

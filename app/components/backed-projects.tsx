@@ -7,11 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { useAccount } from "wagmi";
 import { getUserBackedProjects, BackedProject } from "@/lib/api";
 import { ManageBackedProjectModal } from "./ManageBackedProjectModal";
+import NFTUpgradeModal from "./NFTUpgradeModal";
+import RefundClaimModal from "./RefundClaimModal";
 import {
   Calendar,
   Clock,
   Loader2,
   AlertCircle,
+  ArrowUp,
+  RotateCcw,
 } from "lucide-react";
 
 export function BackedProjects() {
@@ -23,6 +27,12 @@ export function BackedProjects() {
   // Modal state
   const [selectedProject, setSelectedProject] = useState<BackedProject | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // NFT Upgrade and Refund modal states
+  const [nftUpgradeModalOpen, setNftUpgradeModalOpen] = useState(false);
+  const [selectedNFTProject, setSelectedNFTProject] = useState<any>(null);
+  const [refundModalOpen, setRefundModalOpen] = useState(false);
+  const [selectedRefundProject, setSelectedRefundProject] = useState<any>(null);
 
   useEffect(() => {
     const fetchBackedProjects = async () => {
@@ -72,6 +82,27 @@ export function BackedProjects() {
     };
     
     fetchBackedProjects();
+  };
+
+  const handleNFTUpgrade = (project: BackedProject) => {
+    setSelectedNFTProject({
+      id: project.id,
+      title: project.title,
+      raised: project.raised,
+      status: project.status,
+    });
+    setNftUpgradeModalOpen(true);
+  };
+
+  const handleClaimRefund = (project: BackedProject) => {
+    setSelectedRefundProject({
+      id: project.id,
+      title: project.title,
+      raised: project.raised,
+      status: project.status,
+      deadline: project.createdAt, // Using createdAt as deadline for now
+    });
+    setRefundModalOpen(true);
   };
 
   if (!isConnected) {
@@ -128,14 +159,21 @@ export function BackedProjects() {
     if (project.status === "completed") {
       return { label: "Deliverable Available", variant: "default" as const };
     }
+    if (project.status === "Delivered") {
+      return { label: "Delivered", variant: "default" as const };
+    }
     if (project.status === "live") {
       return { label: "Active", variant: "outline" as const };
+    }
+    if (project.status === "cancelled") {
+      return { label: "Cancelled", variant: "destructive" as const };
     }
     return { label: "Refundable", variant: "outline" as const };
   };
 
   const getDeadlineText = (project: BackedProject) => {
     if (project.status === "completed") return "Completed";
+    if (project.status === "Delivered") return "Delivered";
     if (project.status === "cancelled") return "Cancelled";
     return "Active";
   };
@@ -208,8 +246,21 @@ export function BackedProjects() {
                       Manage Backing
                     </Button>
                     {project.status === "completed" && (
-                      <Button variant="default">
-                        Receive Deliverable
+                      <Button 
+                        variant="default"
+                        onClick={() => handleNFTUpgrade(project)}
+                      >
+                        <ArrowUp className="mr-2 h-4 w-4" />
+                        Upgrade NFT & Claim Rewards
+                      </Button>
+                    )}
+                    {(project.status === "live" || project.status === "draft") && (
+                      <Button 
+                        variant="destructive"
+                        onClick={() => handleClaimRefund(project)}
+                      >
+                        <RotateCcw className="mr-2 h-4 w-4" />
+                        Claim Refund
                       </Button>
                     )}
                   </div>
@@ -234,6 +285,36 @@ export function BackedProjects() {
             creatorAddress: selectedProject.creatorAddress,
             deliverable: selectedProject.deliverable,
           }}
+          onSuccess={handleModalSuccess}
+        />
+      )}
+
+      {/* NFT Upgrade Modal */}
+      {selectedNFTProject && (
+        <NFTUpgradeModal
+          isOpen={nftUpgradeModalOpen}
+          onClose={() => {
+            setNftUpgradeModalOpen(false);
+            setSelectedNFTProject(null);
+          }}
+          project={selectedNFTProject}
+          tokenId={1} // Placeholder - this should come from NFT ownership
+          contribution={selectedNFTProject.backedAmount || 0}
+          onSuccess={handleModalSuccess}
+        />
+      )}
+
+      {/* Refund Claim Modal */}
+      {selectedRefundProject && (
+        <RefundClaimModal
+          isOpen={refundModalOpen}
+          onClose={() => {
+            setRefundModalOpen(false);
+            setSelectedRefundProject(null);
+          }}
+          project={selectedRefundProject}
+          tokenId={1} // Placeholder - this should come from NFT ownership
+          contribution={selectedRefundProject.backedAmount || 0}
           onSuccess={handleModalSuccess}
         />
       )}

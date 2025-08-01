@@ -19,7 +19,7 @@ export type Project = {
   image: string;
   goal: number;
   raised: number;
-  status: "draft" | "live" | "completed" | "cancelled";
+  status: "draft" | "live" | "completed" | "cancelled" | "Delivered";
   creatorAddress: string;
   fundingGoal: number;
   totalBacked: number;

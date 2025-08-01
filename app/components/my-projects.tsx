@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Upload, Users, Calendar, Loader2 } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import { Project, getUserProjects, requestProjectExtension } from '@/lib/api';
+import { ManageBackedProjectModal } from './ManageBackedProjectModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,6 +27,7 @@ const ProjectCard = ({
   status,
   projectId,
   onExtensionRequest,
+  onUploadDeliverable,
 }: {
   image: string;
   title: string;
@@ -36,6 +38,7 @@ const ProjectCard = ({
   status: string;
   projectId: string;
   onExtensionRequest: (projectId: string) => void;
+  onUploadDeliverable: (projectId: string) => void;
 }) => (
   <div className="rounded-lg border overflow-hidden bg-card text-card-foreground shadow-sm">
     <div className="relative">
@@ -73,7 +76,10 @@ const ProjectCard = ({
         </div>
       </div>
       <div className="space-y-2">
-        <button className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full">
+        <button 
+          onClick={() => onUploadDeliverable(projectId)}
+          className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full"
+        >
           <Upload className="mr-2 h-4 w-4" />
           Upload Deliverable
         </button>
@@ -102,6 +108,10 @@ export const MyProjects = () => {
   const [extensionReason, setExtensionReason] = useState("");
   const [isRequestingExtension, setIsRequestingExtension] = useState(false);
 
+  // Manage project modal state
+  const [manageModalOpen, setManageModalOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+
   useEffect(() => {
     const fetchProjects = async () => {
       if (!address) {
@@ -126,6 +136,14 @@ export const MyProjects = () => {
   const handleExtensionRequest = (projectId: string) => {
     setSelectedProjectId(projectId);
     setExtensionModalOpen(true);
+  };
+
+  const handleUploadDeliverable = (projectId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (project) {
+      setSelectedProject(project);
+      setManageModalOpen(true);
+    }
   };
 
   const handleSubmitExtension = async () => {
@@ -157,6 +175,34 @@ export const MyProjects = () => {
     } finally {
       setIsRequestingExtension(false);
     }
+  };
+
+  const handleCloseExtensionModal = () => {
+    setExtensionModalOpen(false);
+    setExtensionDays("");
+    setExtensionReason("");
+    setSelectedProjectId("");
+  };
+
+  const handleCloseManageModal = () => {
+    setManageModalOpen(false);
+    setSelectedProject(null);
+  };
+
+  const handleManageModalSuccess = () => {
+    // Refresh projects to get updated data
+    const fetchProjects = async () => {
+      if (!address) return;
+      
+      try {
+        const data = await getUserProjects(address);
+        setProjects(data);
+      } catch (err) {
+        console.error("Error refreshing projects:", err);
+      }
+    };
+    
+    fetchProjects();
   };
 
   if (!address) {
@@ -217,6 +263,7 @@ export const MyProjects = () => {
               status={project.status}
               projectId={project.id}
               onExtensionRequest={handleExtensionRequest}
+              onUploadDeliverable={handleUploadDeliverable}
             />
           ))}
         </div>
@@ -272,7 +319,7 @@ export const MyProjects = () => {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setExtensionModalOpen(false)}
+                onClick={handleCloseExtensionModal}
                 disabled={isRequestingExtension}
                 className="flex-1"
               >
@@ -297,6 +344,24 @@ export const MyProjects = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Manage Backed Project Modal */}
+      {selectedProject && (
+        <ManageBackedProjectModal
+          isOpen={manageModalOpen}
+          onCloseAction={handleCloseManageModal}
+          project={{
+            id: selectedProject.id,
+            title: selectedProject.title,
+            goal: selectedProject.goal,
+            raised: selectedProject.raised,
+            status: selectedProject.status,
+            creatorAddress: selectedProject.creatorAddress,
+            deliverable: selectedProject.deliverable,
+          }}
+          onSuccess={handleManageModalSuccess}
+        />
+      )}
     </>
   );
 };

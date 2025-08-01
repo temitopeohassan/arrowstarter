@@ -260,6 +260,86 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
   }
 });
 
+app.post("/api/projects/:id/deliverable", upload.single("file"), async (req, res) => {
+  console.log("📨 POST /api/projects/:id/deliverable", req.params);
+  try {
+    const { projectId } = req.params;
+    const { description } = req.body;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    // Validate file size (max 50MB)
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (file.size > maxSize) {
+      return res.status(400).json({ error: "File size too large. Maximum size is 50MB." });
+    }
+
+    // Get project details
+    const projectRef = db.collection("projects").doc(projectId);
+    const projectDoc = await projectRef.get();
+    
+    if (!projectDoc.exists) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+
+    const projectData = projectDoc.data();
+
+    // Upload file to IPFS via Pinata
+    const pinata = new PinataSDK({
+      pinataJwt: process.env.PINATA_JWT,
+    });
+
+    const options = {
+      pinataMetadata: {
+        name: `${projectData.title} - Deliverable`,
+        keyvalues: {
+          projectId: projectId,
+          projectTitle: projectData.title,
+          uploadedAt: new Date().toISOString(),
+          description: description || "",
+        }
+      },
+      pinataOptions: {
+        cidVersion: 0
+      }
+    };
+
+    const result = await pinata.uploadFile(file.buffer, options);
+    const ipfsHash = result.IpfsHash;
+    const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
+
+    // Store deliverable info in project
+    await projectRef.update({
+      deliverable: {
+        ipfsHash: ipfsHash,
+        ipfsUrl: ipfsUrl,
+        fileName: file.originalname,
+        fileSize: file.size,
+        mimeType: file.mimetype,
+        description: description || "",
+        uploadedAt: Timestamp.now(),
+        uploadedBy: projectData.creatorAddress,
+      },
+      status: "Delivered",
+      updatedAt: Timestamp.now(),
+    });
+
+    res.json({ 
+      message: "Deliverable uploaded successfully",
+      ipfsHash: ipfsHash,
+      ipfsUrl: ipfsUrl,
+      fileName: file.originalname,
+    });
+
+  } catch (err) {
+    console.error("❌ Upload Deliverable Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get("/api/users/:address/projects", async (req, res) => {
   console.log("📨 GET /api/users/:address/projects", req.params);
   try {

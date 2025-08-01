@@ -24,6 +24,16 @@ export type Project = {
   fundingGoal: number;
   totalBacked: number;
   backersCount: number;
+  deliverable?: {
+    ipfsHash: string;
+    ipfsUrl: string;
+    fileName: string;
+    fileSize: number;
+    mimeType: string;
+    description: string;
+    uploadedAt: any;
+    uploadedBy: string;
+  };
 };
 
 // 🔨 Project APIs
@@ -200,6 +210,34 @@ export async function uploadFile(file: File): Promise<{ url: string }> {
     return response.data;
   } catch (error: any) {
     log("Error uploading file", error.response?.data || error.message);
+    throw error;
+  }
+}
+
+export async function uploadDeliverable(
+  projectId: string,
+  file: File,
+  description?: string
+): Promise<{ success: boolean; message: string; ipfsHash: string; ipfsUrl: string; fileName: string }> {
+  try {
+    log(`Uploading deliverable for project: ${projectId}`, { fileName: file.name, size: file.size });
+    
+    const formData = new FormData();
+    formData.append("file", file);
+    if (description) {
+      formData.append("description", description);
+    }
+
+    const response = await axios.post(`${API_BASE_URL}/api/projects/${projectId}/deliverable`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    
+    log("Deliverable uploaded", response.data);
+    return response.data;
+  } catch (error: any) {
+    log("Error uploading deliverable", error.response?.data || error.message);
     throw error;
   }
 }

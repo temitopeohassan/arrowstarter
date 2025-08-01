@@ -123,6 +123,21 @@ export async function backProject(
   }
 }
 
+export async function requestProjectExtension(
+  projectId: string,
+  data: { extensionDays: number; reason?: string }
+): Promise<{ success: boolean; message: string; newDeadline: string; extensionDays: number }> {
+  try {
+    log(`Requesting extension for project: ${projectId}`, data);
+    const response = await axios.post(`${API_BASE_URL}/api/projects/${projectId}/extension`, data);
+    log("Extension requested", response.data);
+    return response.data;
+  } catch (error: any) {
+    log("Error requesting extension", error.response?.data || error.message);
+    throw error;
+  }
+}
+
 // 🪙 NFT Minting
 
 export type MintRoughDraftNFTInput = {

@@ -1,9 +1,20 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Upload, Users, Calendar } from 'lucide-react';
+import { Upload, Users, Calendar, Loader2 } from 'lucide-react';
 import { useAccount } from 'wagmi';
-import { Project, getUserProjects } from '@/lib/api';
+import { Project, getUserProjects, requestProjectExtension } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 const ProjectCard = ({
   image,
@@ -13,6 +24,8 @@ const ProjectCard = ({
   thresholdTarget,
   deliveryDate,
   status,
+  projectId,
+  onExtensionRequest,
 }: {
   image: string;
   title: string;
@@ -21,6 +34,8 @@ const ProjectCard = ({
   thresholdTarget: string;
   deliveryDate: string;
   status: string;
+  projectId: string;
+  onExtensionRequest: (projectId: string) => void;
 }) => (
   <div className="rounded-lg border overflow-hidden bg-card text-card-foreground shadow-sm">
     <div className="relative">
@@ -62,7 +77,10 @@ const ProjectCard = ({
           <Upload className="mr-2 h-4 w-4" />
           Upload Deliverable
         </button>
-        <button className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium border bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 w-full">
+        <button 
+          onClick={() => onExtensionRequest(projectId)}
+          className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium border bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 w-full"
+        >
           <Users className="mr-2 h-4 w-4" />
           Request Extension
         </button>
@@ -76,6 +94,13 @@ export const MyProjects = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  
+  // Extension modal state
+  const [extensionModalOpen, setExtensionModalOpen] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [extensionDays, setExtensionDays] = useState("");
+  const [extensionReason, setExtensionReason] = useState("");
+  const [isRequestingExtension, setIsRequestingExtension] = useState(false);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -97,6 +122,42 @@ export const MyProjects = () => {
 
     fetchProjects();
   }, [address]);
+
+  const handleExtensionRequest = (projectId: string) => {
+    setSelectedProjectId(projectId);
+    setExtensionModalOpen(true);
+  };
+
+  const handleSubmitExtension = async () => {
+    if (!extensionDays || parseInt(extensionDays) <= 0) {
+      setError("Please enter a valid number of days");
+      return;
+    }
+
+    setIsRequestingExtension(true);
+    setError("");
+
+    try {
+      await requestProjectExtension(selectedProjectId, {
+        extensionDays: parseInt(extensionDays),
+        reason: extensionReason,
+      });
+
+      // Refresh projects to get updated data
+      const updatedProjects = await getUserProjects(address!);
+      setProjects(updatedProjects);
+
+      // Close modal and reset form
+      setExtensionModalOpen(false);
+      setExtensionDays("");
+      setExtensionReason("");
+      setSelectedProjectId("");
+    } catch (err: any) {
+      setError(err.message || "Failed to request extension");
+    } finally {
+      setIsRequestingExtension(false);
+    }
+  };
 
   if (!address) {
     return (
@@ -140,22 +201,102 @@ export const MyProjects = () => {
   }
 
   return (
-    <div className="mb-8">
-      <h2 className="text-2xl font-bold mb-4">My Projects ({projects.length})</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {projects.map((project) => (
-          <ProjectCard
-            key={project.id}
-            image={project.image || "/placeholder.png"}
-            title={project.title}
-            ethRaised={`${project.raised} ETH`}
-            thresholdPercent={`${Math.round((project.raised / project.goal) * 100)}%`}
-            thresholdTarget={`${project.raised} / ${project.goal} ETH`}
-            deliveryDate={new Date(project.createdAt).toLocaleDateString()}
-            status={project.status}
-          />
-        ))}
+    <>
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold mb-4">My Projects ({projects.length})</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {projects.map((project) => (
+            <ProjectCard
+              key={project.id}
+              image={project.image || "/placeholder.png"}
+              title={project.title}
+              ethRaised={`${project.raised} ETH`}
+              thresholdPercent={`${Math.round((project.raised / project.goal) * 100)}%`}
+              thresholdTarget={`${project.raised} / ${project.goal} ETH`}
+              deliveryDate={new Date(project.createdAt).toLocaleDateString()}
+              status={project.status}
+              projectId={project.id}
+              onExtensionRequest={handleExtensionRequest}
+            />
+          ))}
+        </div>
       </div>
-    </div>
+
+      {/* Extension Request Modal */}
+      <Dialog open={extensionModalOpen} onOpenChange={setExtensionModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Request Project Extension</DialogTitle>
+            <DialogDescription>
+              Request additional time to complete your project delivery.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="extensionDays">Extension Days</Label>
+              <Input
+                id="extensionDays"
+                type="number"
+                min="1"
+                max="365"
+                placeholder="30"
+                value={extensionDays}
+                onChange={(e) => setExtensionDays(e.target.value)}
+                disabled={isRequestingExtension}
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter the number of additional days you need (1-365)
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="extensionReason">Reason for Extension</Label>
+              <Textarea
+                id="extensionReason"
+                placeholder="Please explain why you need an extension..."
+                value={extensionReason}
+                onChange={(e) => setExtensionReason(e.target.value)}
+                disabled={isRequestingExtension}
+                rows={3}
+              />
+            </div>
+
+            {error && (
+              <div className="rounded-md bg-destructive/10 p-3">
+                <p className="text-sm text-destructive">{error}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setExtensionModalOpen(false)}
+                disabled={isRequestingExtension}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSubmitExtension}
+                disabled={isRequestingExtension || !extensionDays}
+                className="flex-1"
+              >
+                {isRequestingExtension ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Requesting...
+                  </>
+                ) : (
+                  "Request Extension"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };

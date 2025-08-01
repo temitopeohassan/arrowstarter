@@ -174,6 +174,47 @@ app.post("/api/projects/:id/back", async (req, res) => {
   }
 });
 
+app.post("/api/projects/:id/extension", async (req, res) => {
+  console.log("📨 POST /api/projects/:id/extension", req.params, req.body);
+  try {
+    const { extensionDays, reason } = req.body;
+    
+    if (!extensionDays || extensionDays <= 0) {
+      return res.status(400).json({ error: "Extension days must be greater than 0" });
+    }
+
+    const projectRef = db.collection("projects").doc(req.params.id);
+    const projectDoc = await projectRef.get();
+    
+    if (!projectDoc.exists) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+
+    const projectData = projectDoc.data();
+    const currentDeadline = new Date(projectData.deadline || projectData.createdAt);
+    const newDeadline = new Date(currentDeadline.getTime() + (extensionDays * 24 * 60 * 60 * 1000));
+
+    // Update the project with new deadline and extension info
+    await projectRef.update({
+      deadline: newDeadline,
+      extensionRequested: true,
+      extensionDays: extensionDays,
+      extensionReason: reason || "",
+      extensionRequestedAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    res.json({ 
+      message: "Extension requested successfully",
+      newDeadline: newDeadline,
+      extensionDays: extensionDays
+    });
+  } catch (err) {
+    console.error("❌ Request Extension Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const pinata = new PinataSDK({
   pinataJwt: process.env.PINATA_JWT,
   pinataGateway: process.env.PINATA_GATEWAY,

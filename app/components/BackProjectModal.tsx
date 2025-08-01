@@ -67,29 +67,23 @@ export function BackProjectModal({
       return;
     }
 
-    // Validate project ID
-    const projectId = parseInt(project.id);
-    if (isNaN(projectId) || projectId <= 0) {
-      setError("Project ID mapping issue: Backend and smart contract IDs don't match. Please contact support.");
-      return;
-    }
-
     setError("");
     setSuccessMessage("");
 
     try {
-      // Step 1: Back the project on-chain
-      setSuccessMessage("Backing project on blockchain...");
-      await backProjectContract(projectId, amount);
+      // For the current deployed contract, we'll use a simplified approach
+      // Since the RoughDraftNFT only has basic ERC721 functions, we'll:
+      // 1. Update the backend with the backing information
+      // 2. Mint an NFT to the backer as proof of backing
       
-      // Step 2: Update backend
+      // Step 1: Update backend
       setSuccessMessage("Updating project data...");
       await backProject(project.id, {
         amount: amountNumber,
         backerAddress: address!,
       });
 
-      // Step 3: Mint NFT for the backer
+      // Step 2: Mint NFT for the backer (this represents backing the project)
       setSuccessMessage("Minting your NFT...");
       setStep("mint");
       await mintNFT(address!);

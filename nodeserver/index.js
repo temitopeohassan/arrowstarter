@@ -66,6 +66,7 @@ app.post("/api/projects", async (req, res) => {
       featured = false,
     } = req.body;
 
+    // Create project in Firebase
     const docRef = await db.collection("projects").add({
       title,
       description,
@@ -81,7 +82,10 @@ app.post("/api/projects", async (req, res) => {
       updatedAt: new Date(),
     });
 
-    res.status(201).json({ id: docRef.id, message: "Project created successfully" });
+    res.status(201).json({ 
+      id: docRef.id, 
+      message: "Project created successfully" 
+    });
   } catch (err) {
     console.error("❌ Create Project Error:", err);
     res.status(500).json({ error: err.message });

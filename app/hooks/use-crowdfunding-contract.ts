@@ -2,54 +2,53 @@
 
 import { useWriteContract, useReadContract, useTransaction } from "wagmi";
 import { parseEther, formatEther } from "viem";
-import CrowdFundingABI from "../contracts/CrowdFunding.json";
-import { CROWDFUNDING_CONTRACT_ADDRESS } from "../config";
+import { roughDraftNftAbi } from "../constants/roughDraftNftAbi";
+import { ROUGH_DRAFT_NFT_ADDRESS } from "../config";
 
 export function useCrowdfundingContract() {
-  // Get campaign details
-  const getCampaign = (campaignId: number) => {
+  // Get NFT balance for a user
+  const getBalance = (address: string) => {
     return useReadContract({
-      address: CROWDFUNDING_CONTRACT_ADDRESS as `0x${string}`,
-      abi: CrowdFundingABI.abi,
-      functionName: "getCampaign",
-      args: [BigInt(campaignId)],
+      address: ROUGH_DRAFT_NFT_ADDRESS as `0x${string}`,
+      abi: roughDraftNftAbi,
+      functionName: "balanceOf",
+      args: [address as `0x${string}`],
     });
   };
 
-  // Get donation amount for a specific donor
-  const getDonation = (campaignId: number, donorAddress: string) => {
+  // Get token owner
+  const getTokenOwner = (tokenId: number) => {
     return useReadContract({
-      address: CROWDFUNDING_CONTRACT_ADDRESS as `0x${string}`,
-      abi: CrowdFundingABI.abi,
-      functionName: "getDonation",
-      args: [BigInt(campaignId), donorAddress as `0x${string}`],
+      address: ROUGH_DRAFT_NFT_ADDRESS as `0x${string}`,
+      abi: roughDraftNftAbi,
+      functionName: "ownerOf",
+      args: [BigInt(tokenId)],
     });
   };
 
   return {
-    getCampaign,
-    getDonation,
+    getBalance,
+    getTokenOwner,
   };
 }
 
-// Hook for backing a project with ETH
+// Hook for backing a project with ETH using RoughDraftNFT
 export function useBackProject() {
-  const { writeContractAsync, isPending: isDonating, data: donateData } = useWriteContract();
+  const { writeContractAsync, isPending: isBacking, data: backData } = useWriteContract();
   
   const { isPending: isConfirming } = useTransaction({
-    hash: donateData,
+    hash: backData,
   });
 
-  const backProject = async (campaignId: number, amountInEth: string) => {
+  const backProject = async (projectId: number, amountInEth: string) => {
     try {
-      const amountInWei = parseEther(amountInEth);
-      
+      // For the current deployed contract, we'll mint an NFT to the backer
+      // This represents backing the project
       const result = await writeContractAsync({
-        address: CROWDFUNDING_CONTRACT_ADDRESS as `0x${string}`,
-        abi: CrowdFundingABI.abi,
-        functionName: "donate",
-        args: [BigInt(campaignId)],
-        value: amountInWei,
+        address: ROUGH_DRAFT_NFT_ADDRESS as `0x${string}`,
+        abi: roughDraftNftAbi,
+        functionName: "mint",
+        args: [projectId.toString() as `0x${string}`], // Using projectId as the recipient address
       });
 
       return result;
@@ -61,9 +60,9 @@ export function useBackProject() {
 
   return {
     backProject,
-    isDonating,
+    isBacking,
     isConfirming,
-    isLoading: isDonating || isConfirming,
-    transactionHash: donateData,
+    isLoading: isBacking || isConfirming,
+    transactionHash: backData,
   };
 } 

@@ -67,13 +67,20 @@ export function BackProjectModal({
       return;
     }
 
+    // Validate project ID
+    const projectId = parseInt(project.id);
+    if (isNaN(projectId) || projectId <= 0) {
+      setError("Invalid project ID");
+      return;
+    }
+
     setError("");
     setSuccessMessage("");
 
     try {
       // Step 1: Back the project on-chain
       setSuccessMessage("Backing project on blockchain...");
-      await backProjectContract(parseInt(project.id), amount);
+      await backProjectContract(projectId, amount);
       
       // Step 2: Update backend
       setSuccessMessage("Updating project data...");

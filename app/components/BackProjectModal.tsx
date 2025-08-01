@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Wallet, AlertCircle, CheckCircle } from "lucide-react";
-import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { useAccount, useDisconnect } from "wagmi";
 import { useBackProject } from "@/hooks/use-crowdfunding-contract";
 import { useNFTMinting } from "@/hooks/use-nft-minting";
 import { backProject } from "@/lib/api";
@@ -38,26 +38,15 @@ export function BackProjectModal({
   const [amount, setAmount] = useState("");
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [step, setStep] = useState<"connect" | "back" | "mint" | "success">("connect");
+  const [step, setStep] = useState<"back" | "mint" | "success">("back");
 
   // Web3 hooks
   const { address, isConnected } = useAccount();
-  const { connect, connectors, isPending: isConnecting } = useConnect();
   const { disconnect } = useDisconnect();
 
   // Contract hooks
   const { backProject: backProjectContract, isLoading: isBacking, transactionHash: backingTxHash } = useBackProject();
   const { mintNFT, isLoading: isMinting, transactionHash: mintingTxHash } = useNFTMinting();
-
-  const handleConnect = async (connector: any) => {
-    try {
-      setError("");
-      await connect({ connector });
-      setStep("back");
-    } catch (err: any) {
-      setError("Failed to connect wallet: " + err.message);
-    }
-  };
 
   const handleBackProject = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,7 +102,7 @@ export function BackProjectModal({
       // Close modal after delay
       setTimeout(() => {
         onCloseAction();
-        setStep("connect");
+        setStep("back");
         setSuccessMessage("");
       }, 3000);
 
@@ -129,7 +118,7 @@ export function BackProjectModal({
       setAmount("");
       setError("");
       setSuccessMessage("");
-      setStep("connect");
+      setStep("back");
       onCloseAction();
     }
   };
@@ -169,44 +158,7 @@ export function BackProjectModal({
             </div>
           </div>
 
-          {/* Step 1: Connect Wallet */}
-          {step === "connect" && (
-            <div className="space-y-4">
-              <div className="text-center">
-                <Wallet className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">Connect Your Wallet</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Connect your Web3 wallet to back this project and receive an NFT.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                {connectors.map((connector) => (
-                  <Button
-                    key={connector.uid}
-                    onClick={() => handleConnect(connector)}
-                    disabled={isConnecting}
-                    className="w-full"
-                    variant="outline"
-                  >
-                    {isConnecting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Connecting...
-                      </>
-                    ) : (
-                      <>
-                        <Wallet className="mr-2 h-4 w-4" />
-                        Connect {connector.name}
-                      </>
-                    )}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Step 2: Back Project */}
+          {/* Back Project Form */}
           {step === "back" && isConnected && (
             <form onSubmit={handleBackProject} className="space-y-4">
               {/* Connected Wallet Info */}
@@ -295,7 +247,7 @@ export function BackProjectModal({
             </form>
           )}
 
-          {/* Step 3: Minting NFT */}
+          {/* Step 2: Minting NFT */}
           {step === "mint" && (
             <div className="text-center space-y-4">
               <div className="animate-pulse">
@@ -314,7 +266,7 @@ export function BackProjectModal({
             </div>
           )}
 
-          {/* Step 4: Success */}
+          {/* Step 3: Success */}
           {step === "success" && (
             <div className="text-center space-y-4">
               <CheckCircle className="h-12 w-12 mx-auto text-green-600" />

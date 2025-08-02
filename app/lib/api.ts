@@ -24,6 +24,7 @@ export type Project = {
   fundingGoal: number;
   totalBacked: number;
   backersCount: number;
+  deadline?: string;
   deliverable?: {
     ipfsHash: string;
     ipfsUrl: string;

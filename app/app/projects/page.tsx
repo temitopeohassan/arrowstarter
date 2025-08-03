@@ -22,6 +22,7 @@ import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 import { API_BASE_URL } from "../config";
 import { BackProjectModal } from "@/components/BackProjectModal"; // Adjust path as needed
+import { useFarcasterAutoConnect } from "@/hooks/use-farcaster-auto-connect";
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<any[]>([]);
@@ -30,6 +31,9 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedProject, setSelectedProject] = useState<any | null>(null);
+  
+  // Use the auto-connect hook to ensure connection is maintained
+  const { isConnected, address, isInitialized, isInFrame } = useFarcasterAutoConnect();
 
   const fetchProjects = async () => {
     try {

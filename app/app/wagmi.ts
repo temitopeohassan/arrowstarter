@@ -5,6 +5,7 @@ import '@rainbow-me/rainbowkit/styles.css';
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { cookieStorage, createStorage } from 'wagmi';
 import { base, baseSepolia } from 'wagmi/chains';
+import { farcasterFrameConnector } from '@farcaster/frame-wagmi-connector';
 
 export const config = getDefaultConfig({
   appName: 'Arrow Starter',
@@ -14,6 +15,15 @@ export const config = getDefaultConfig({
   storage: createStorage({
     storage: cookieStorage,
   }),
+  connectors: [
+    farcasterFrameConnector({
+      chains: [base, baseSepolia],
+      options: {
+        // Enable auto-connection when in Farcaster frame
+        autoConnect: true,
+      },
+    }),
+  ],
 });
 
 declare module 'wagmi' {

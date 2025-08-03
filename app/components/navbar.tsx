@@ -8,13 +8,15 @@ import CreateProjectForm from "@/components/createprojectform";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-
+import { useFarcasterAutoConnect } from "@/hooks/use-farcaster-auto-connect";
 
 export function Navbar() {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);
   const [showCreateModal, setShowCreateModal] = useState(false);
-
+  
+  // Use the auto-connect hook to ensure connection is maintained
+  const { isConnected, address, isInitialized, isInFrame } = useFarcasterAutoConnect();
 
   function truncateAddress(address: string) {
     return `${address.slice(0, 4)}...${address.slice(-3)}`;

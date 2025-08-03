@@ -1,19 +1,17 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MyProjects } from "@/components/my-projects";
 import { BackedProjects } from "@/components/backed-projects";
 import { sdk } from "@farcaster/frame-sdk";
+import { useFarcasterAutoConnect } from "@/hooks/use-farcaster-auto-connect";
 
 export default function Dashboard() {
-  useEffect(() => {
-    sdk.actions.ready();
-  }, []);
+  // Use the auto-connect hook to ensure connection is maintained
+  const { isConnected, address, isInitialized, isInFrame } = useFarcasterAutoConnect();
 
- 
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Dashboard Summary */}

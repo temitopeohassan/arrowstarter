@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
 import { ArrowRight, Film, Book, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,11 +7,11 @@ import { Card } from "@/components/ui/card";
 import { Projects } from "@/components/projects";
 import { HeroFeatured } from "@/components/hero-featured";
 import { sdk } from "@farcaster/frame-sdk";
+import { useFarcasterAutoConnect } from "@/hooks/use-farcaster-auto-connect";
 
 export default function Home() {
-  useEffect(() => {
-    sdk.actions.ready();
-  }, []);
+  // Use the auto-connect hook
+  const { isConnected, address, isInitialized, isInFrame } = useFarcasterAutoConnect();
 
   const handleAddMiniApp = async () => {
     try {
@@ -22,7 +21,6 @@ export default function Home() {
       console.error("Failed to add mini app:", error);
     }
   };
-
 
   return (
     <div className="container mx-auto px-4 py-8">

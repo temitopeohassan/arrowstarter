@@ -17,19 +17,24 @@ export function useFarcasterAutoConnect() {
     try {
       console.log('Farcaster auto-connect: Is in frame:', isInFrame);
       console.log('Farcaster auto-connect: Connection status:', connectionStatus);
+      console.log('Farcaster auto-connect: Available connectors:', connectors.map(c => ({ id: c.id, name: c.name })));
 
       if (isInFrame && !isConnected && !isPending && connectionStatus === 'connected') {
-        // Find the Farcaster frame connector
+        // Find the Farcaster frame connector - try different possible IDs
         const farcasterConnector = connectors.find(
-          (connector) => connector.id === 'farcaster'
+          (connector) => 
+            connector.id === 'farcaster' || 
+            connector.id === 'farcasterFrame' ||
+            connector.name?.toLowerCase().includes('farcaster')
         );
 
         if (farcasterConnector) {
+          console.log('Farcaster auto-connect: Found connector:', farcasterConnector.id, farcasterConnector.name);
           console.log('Farcaster auto-connect: Attempting to connect with Farcaster connector');
           await connect({ connector: farcasterConnector });
           setConnectionAttempts(prev => prev + 1);
         } else {
-          console.warn('Farcaster auto-connect: Farcaster connector not found');
+          console.warn('Farcaster auto-connect: Farcaster connector not found. Available connectors:', connectors.map(c => c.id));
         }
       }
     } catch (error) {

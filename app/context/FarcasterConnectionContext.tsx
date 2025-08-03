@@ -48,7 +48,12 @@ export function FarcasterConnectionProvider({ children }: { children: React.Reac
       }
     };
 
-    initializeFarcaster();
+    // Add a small delay to ensure the SDK is available
+    const timeoutId = setTimeout(() => {
+      initializeFarcaster();
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
   }, []);
 
   return (

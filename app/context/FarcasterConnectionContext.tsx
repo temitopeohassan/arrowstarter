@@ -29,8 +29,8 @@ export function FarcasterConnectionProvider({ children }: { children: React.Reac
         await sdk.actions.ready();
         console.log('FarcasterConnectionContext: SDK initialized');
         
-        // Check if we're in a Farcaster frame
-        const frameStatus = sdk.isInFrame();
+        // Check if we're in a Farcaster frame by checking if we're in an iframe
+        const frameStatus = window !== window.parent;
         setIsInFrame(frameStatus);
         console.log('FarcasterConnectionContext: Is in frame:', frameStatus);
         
